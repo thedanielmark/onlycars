@@ -28,11 +28,10 @@ const Map = () => {
         {`
       .gm-style-iw-c {
         height: calc(100vh - 64px);
-        width: calc(100vw - 72px);
       }
       `}
       </style>
-      <div className="gm-style-iw-c absolute top-[64px] left-[72px]">
+      <div className="gm-style-iw-c absolute top-[64px] w-full">
         <GoogleMap
           mapContainerStyle={defaultMapContainerStyle}
           center={defaultMapCenter}
