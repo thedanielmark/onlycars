@@ -8,6 +8,7 @@ import React, {
   ReactNode,
 } from "react";
 import { Web3AuthNoModal } from "@web3auth/no-modal";
+import { Web3AuthProvider } from "@web3auth/no-modal-react-hooks";
 import {
   WALLET_ADAPTERS,
   CHAIN_NAMESPACES,

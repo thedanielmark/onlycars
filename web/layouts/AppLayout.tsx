@@ -12,9 +12,20 @@ import {
 } from "@headlessui/react";
 import { Bars3Icon, BellIcon, XMarkIcon } from "@heroicons/react/24/outline";
 import { Metadata } from "next";
-import { ReactNode } from "react";
-import { useAuth } from "@/providers/AuthProvider";
-import { log } from "console";
+import { ReactNode, useEffect, useState } from "react";
+// import { useAuth } from "@/providers/AuthProvider";
+import { IProvider } from "@web3auth/base";
+import { useWeb3Auth } from "@web3auth/modal-react-hooks";
+import { AlchemyProvider } from "@alchemy/aa-alchemy";
+import { SmartAccountSigner, WalletClientSigner } from "@alchemy/aa-core";
+import { getDefaultExternalAdapters } from "@web3auth/default-evm-adapter";
+import { createWalletClient, custom } from "viem";
+import { web3AuthOptions } from "@/providers/web3AuthProviderProps";
+import { sepolia } from "viem/chains";
+import {
+  LightSmartContractAccount,
+  getDefaultLightAccountFactoryAddress,
+} from "@alchemy/aa-accounts";
 
 const user = {
   name: "Tom Cook",
@@ -42,181 +53,237 @@ interface LayoutProps {
   children: ReactNode;
 }
 
-export const metadata: Metadata = {
-  title: `Login | ${process.env.NEXT_PUBLIC_APP_NAME}`,
-  description: "",
-};
-
 const AppLayout = ({ children }: LayoutProps) => {
-  const { loggedIn, login, logout } = useAuth();
+  // const { loggedIn, login, logout } = useAuth();
+  const [provider, setProvider] = useState<IProvider | null>(null);
+  const [alchemyProvider, setAlchemyProvider] =
+    useState<AlchemyProvider | null>(null);
+  const [loggedIn, setLoggedIn] = useState(false);
+  const { isConnected, initModal, web3Auth } = useWeb3Auth();
+
+  useEffect(() => {
+    const init = async () => {
+      try {
+        console.log(web3Auth);
+        if (web3Auth) {
+          console.log(web3Auth);
+          // Adding default evm adapters
+          const adapters = await getDefaultExternalAdapters({
+            options: web3AuthOptions,
+          });
+          adapters.forEach((adapter) => {
+            web3Auth?.configureAdapter(adapter);
+          });
+          await initModal();
+          // IMP END - SDK Initialization
+          setProvider(web3Auth.provider);
+          const walletClient = createWalletClient({
+            chain: sepolia, // can provide a different chain here
+            transport: custom(web3Auth.provider as any),
+          });
+
+          const signer: SmartAccountSigner = new WalletClientSigner(
+            walletClient,
+            "json-rpc" // signerType
+          );
+          // IMP END - Login
+          const chain = sepolia;
+
+          // Create a provider to send user operations from your smart account
+          const alchemyProvider = new AlchemyProvider({
+            // get your Alchemy API key at https://dashboard.alchemy.com
+            apiKey: process.env.NEXT_PUBLIC_API_KEY as string,
+            chain,
+          }).connect(
+            (rpcClient) =>
+              new LightSmartContractAccount({
+                rpcClient,
+                owner: signer,
+                chain,
+                factoryAddress: getDefaultLightAccountFactoryAddress(chain),
+              })
+          );
+          setAlchemyProvider(alchemyProvider);
+
+          if (web3Auth.connected) {
+            setLoggedIn(true);
+          }
+        }
+      } catch (error) {
+        console.error(error);
+      }
+    };
+
+    init();
+  }, [web3Auth, initModal]);
 
   return (
     <>
-      {loggedIn ? (
-        <div className="min-h-full">
-          <Disclosure as="nav" className="bg-white shadow-xl">
-            <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-              <div className="flex h-16 justify-between">
-                <div className="flex">
-                  <div className="flex flex-shrink-0 items-center gap-x-2">
-                    <img
-                      alt="Your Company"
-                      src="/logo.png"
-                      className="block h-8 w-8"
-                    />
-                    <span className="mt-1 text-xl font-black text-purple-500">
-                      Only
-                      <span className="font-black text-purple-700">Cars</span>
-                    </span>
-                  </div>
-                  <div className="hidden sm:-my-px sm:ml-6 sm:flex sm:space-x-8">
-                    {navigation.map((item) => (
-                      <a
-                        key={item.name}
-                        href={item.href}
-                        aria-current={item.current ? "page" : undefined}
-                        className={classNames(
-                          item.current
-                            ? "border-purple-500 text-gray-900"
-                            : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700",
-                          "inline-flex items-center border-b-2 px-1 pt-1 text-sm font-medium"
-                        )}
-                      >
-                        {item.name}
-                      </a>
-                    ))}
-                  </div>
+      {/* {loggedIn ? ( */}
+      <div className="min-h-full">
+        <Disclosure as="nav" className="bg-white shadow-xl">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <div className="flex h-16 justify-between">
+              <div className="flex">
+                <div className="flex flex-shrink-0 items-center gap-x-2">
+                  <img
+                    alt="Your Company"
+                    src="/logo.png"
+                    className="block h-8 w-8"
+                  />
+                  <span className="mt-1 text-xl font-black text-purple-500">
+                    Only
+                    <span className="font-black text-purple-700">Cars</span>
+                  </span>
                 </div>
-                <div className="hidden sm:ml-6 sm:flex sm:items-center">
-                  <button
-                    type="button"
-                    className="relative rounded-full bg-white p-1 text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
-                  >
-                    <span className="absolute -inset-1.5" />
-                    <span className="sr-only">View notifications</span>
-                    <BellIcon aria-hidden="true" className="h-6 w-6" />
-                  </button>
-
-                  {/* Profile dropdown */}
-                  <Menu as="div" className="relative ml-3">
-                    <div>
-                      <MenuButton className="relative flex rounded-full bg-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2">
-                        <span className="absolute -inset-1.5" />
-                        <span className="sr-only">Open user menu</span>
-                        <img
-                          alt=""
-                          src={user.imageUrl}
-                          className="h-8 w-8 rounded-full"
-                        />
-                      </MenuButton>
-                    </div>
-                    <MenuItems
-                      transition
-                      className="absolute right-0 z-10 mt-2 w-48 origin-top-right rounded-md bg-white py-1 shadow-lg ring-1 ring-black ring-opacity-5 transition focus:outline-none data-[closed]:scale-95 data-[closed]:transform data-[closed]:opacity-0 data-[enter]:duration-200 data-[leave]:duration-75 data-[enter]:ease-out data-[leave]:ease-in"
+                <div className="hidden sm:-my-px sm:ml-6 sm:flex sm:space-x-8">
+                  {navigation.map((item) => (
+                    <a
+                      key={item.name}
+                      href={item.href}
+                      aria-current={item.current ? "page" : undefined}
+                      className={classNames(
+                        item.current
+                          ? "border-purple-500 text-gray-900"
+                          : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700",
+                        "inline-flex items-center border-b-2 px-1 pt-1 text-sm font-medium"
+                      )}
                     >
-                      {userNavigation.map((item) => (
-                        <MenuItem key={item.name}>
-                          <a
-                            href={item.href}
-                            className="block px-4 py-2 text-sm text-gray-700 data-[focus]:bg-gray-100"
-                          >
-                            {item.name}
-                          </a>
-                        </MenuItem>
-                      ))}
-                      <MenuItem>
-                        <div
-                          className="block px-4 py-2 text-sm text-gray-700 data-[focus]:bg-gray-100"
-                          onClick={logout}
-                        >
-                          Disconnect Wallet
-                        </div>
-                      </MenuItem>
-                    </MenuItems>
-                  </Menu>
-                </div>
-                <div className="-mr-2 flex items-center sm:hidden">
-                  {/* Mobile menu button */}
-                  <DisclosureButton className="group relative inline-flex items-center justify-center rounded-md bg-white p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2">
-                    <span className="absolute -inset-0.5" />
-                    <span className="sr-only">Open main menu</span>
-                    <Bars3Icon
-                      aria-hidden="true"
-                      className="block h-6 w-6 group-data-[open]:hidden"
-                    />
-                    <XMarkIcon
-                      aria-hidden="true"
-                      className="hidden h-6 w-6 group-data-[open]:block"
-                    />
-                  </DisclosureButton>
+                      {item.name}
+                    </a>
+                  ))}
                 </div>
               </div>
-            </div>
+              <div className="hidden sm:ml-6 sm:flex sm:items-center">
+                <button
+                  type="button"
+                  className="relative rounded-full bg-white p-1 text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
+                >
+                  <span className="absolute -inset-1.5" />
+                  <span className="sr-only">View notifications</span>
+                  <BellIcon aria-hidden="true" className="h-6 w-6" />
+                </button>
 
-            <DisclosurePanel className="sm:hidden">
-              <div className="space-y-1 pb-3 pt-2">
-                {navigation.map((item) => (
+                {/* Profile dropdown */}
+                <Menu as="div" className="relative ml-3">
+                  <div>
+                    <MenuButton className="relative flex rounded-full bg-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2">
+                      <span className="absolute -inset-1.5" />
+                      <span className="sr-only">Open user menu</span>
+                      <img
+                        alt=""
+                        src={user.imageUrl}
+                        className="h-8 w-8 rounded-full"
+                      />
+                    </MenuButton>
+                  </div>
+                  <MenuItems
+                    transition
+                    className="absolute right-0 z-10 mt-2 w-48 origin-top-right rounded-md bg-white py-1 shadow-lg ring-1 ring-black ring-opacity-5 transition focus:outline-none data-[closed]:scale-95 data-[closed]:transform data-[closed]:opacity-0 data-[enter]:duration-200 data-[leave]:duration-75 data-[enter]:ease-out data-[leave]:ease-in"
+                  >
+                    {userNavigation.map((item) => (
+                      <MenuItem key={item.name}>
+                        <a
+                          href={item.href}
+                          className="block px-4 py-2 text-sm text-gray-700 data-[focus]:bg-gray-100"
+                        >
+                          {item.name}
+                        </a>
+                      </MenuItem>
+                    ))}
+                    <MenuItem>
+                      <div
+                        className="block px-4 py-2 text-sm text-gray-700 data-[focus]:bg-gray-100"
+                        // onClick={logout}
+                      >
+                        Disconnect Wallet
+                      </div>
+                    </MenuItem>
+                  </MenuItems>
+                </Menu>
+              </div>
+              <div className="-mr-2 flex items-center sm:hidden">
+                {/* Mobile menu button */}
+                <DisclosureButton className="group relative inline-flex items-center justify-center rounded-md bg-white p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2">
+                  <span className="absolute -inset-0.5" />
+                  <span className="sr-only">Open main menu</span>
+                  <Bars3Icon
+                    aria-hidden="true"
+                    className="block h-6 w-6 group-data-[open]:hidden"
+                  />
+                  <XMarkIcon
+                    aria-hidden="true"
+                    className="hidden h-6 w-6 group-data-[open]:block"
+                  />
+                </DisclosureButton>
+              </div>
+            </div>
+          </div>
+
+          <DisclosurePanel className="sm:hidden">
+            <div className="space-y-1 pb-3 pt-2">
+              {navigation.map((item) => (
+                <DisclosureButton
+                  key={item.name}
+                  as="a"
+                  href={item.href}
+                  aria-current={item.current ? "page" : undefined}
+                  className={classNames(
+                    item.current
+                      ? "border-purple-500 bg-purple-50 text-purple-700"
+                      : "border-transparent text-gray-600 hover:border-gray-300 hover:bg-gray-50 hover:text-gray-800",
+                    "block border-l-4 py-2 pl-3 pr-4 text-base font-medium"
+                  )}
+                >
+                  {item.name}
+                </DisclosureButton>
+              ))}
+            </div>
+            <div className="border-t border-gray-200 pb-3 pt-4">
+              <div className="flex items-center px-4">
+                <div className="flex-shrink-0">
+                  <img
+                    alt=""
+                    src={user.imageUrl}
+                    className="h-10 w-10 rounded-full"
+                  />
+                </div>
+                <div className="ml-3">
+                  <div className="text-base font-medium text-gray-800">
+                    {user.name}
+                  </div>
+                  <div className="text-sm font-medium text-gray-500">
+                    {user.email}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  className="relative ml-auto flex-shrink-0 rounded-full bg-white p-1 text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
+                >
+                  <span className="absolute -inset-1.5" />
+                  <span className="sr-only">View notifications</span>
+                  <BellIcon aria-hidden="true" className="h-6 w-6" />
+                </button>
+              </div>
+              <div className="mt-3 space-y-1">
+                {userNavigation.map((item) => (
                   <DisclosureButton
                     key={item.name}
                     as="a"
                     href={item.href}
-                    aria-current={item.current ? "page" : undefined}
-                    className={classNames(
-                      item.current
-                        ? "border-purple-500 bg-purple-50 text-purple-700"
-                        : "border-transparent text-gray-600 hover:border-gray-300 hover:bg-gray-50 hover:text-gray-800",
-                      "block border-l-4 py-2 pl-3 pr-4 text-base font-medium"
-                    )}
+                    className="block px-4 py-2 text-base font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-800"
                   >
                     {item.name}
                   </DisclosureButton>
                 ))}
               </div>
-              <div className="border-t border-gray-200 pb-3 pt-4">
-                <div className="flex items-center px-4">
-                  <div className="flex-shrink-0">
-                    <img
-                      alt=""
-                      src={user.imageUrl}
-                      className="h-10 w-10 rounded-full"
-                    />
-                  </div>
-                  <div className="ml-3">
-                    <div className="text-base font-medium text-gray-800">
-                      {user.name}
-                    </div>
-                    <div className="text-sm font-medium text-gray-500">
-                      {user.email}
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    className="relative ml-auto flex-shrink-0 rounded-full bg-white p-1 text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
-                  >
-                    <span className="absolute -inset-1.5" />
-                    <span className="sr-only">View notifications</span>
-                    <BellIcon aria-hidden="true" className="h-6 w-6" />
-                  </button>
-                </div>
-                <div className="mt-3 space-y-1">
-                  {userNavigation.map((item) => (
-                    <DisclosureButton
-                      key={item.name}
-                      as="a"
-                      href={item.href}
-                      className="block px-4 py-2 text-base font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-800"
-                    >
-                      {item.name}
-                    </DisclosureButton>
-                  ))}
-                </div>
-              </div>
-            </DisclosurePanel>
-          </Disclosure>
+            </div>
+          </DisclosurePanel>
+        </Disclosure>
 
-          <main>{children}</main>
-        </div>
-      ) : (
+        <main>{children}</main>
+      </div>
+      {/* ) : (
         <div className="flex items-center justify-center h-screen">
           <button
             onClick={login}
@@ -225,7 +292,7 @@ const AppLayout = ({ children }: LayoutProps) => {
             Connect Wallet
           </button>
         </div>
-      )}
+      )} */}
     </>
   );
 };
