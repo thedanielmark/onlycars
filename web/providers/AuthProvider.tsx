@@ -1,5 +1,4 @@
 /* eslint-disable no-console */
-
 "use client";
 
 import { createContext, useContext, useEffect, useState } from "react";
