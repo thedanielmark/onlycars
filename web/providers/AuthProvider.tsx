@@ -1,111 +1,74 @@
+/* eslint-disable no-console */
+
 "use client";
 
-import React, {
-  createContext,
-  useContext,
-  useEffect,
-  useState,
-  ReactNode,
-} from "react";
-import { Web3AuthNoModal } from "@web3auth/no-modal";
-import {
-  WALLET_ADAPTERS,
-  CHAIN_NAMESPACES,
-  IProvider,
-  WEB3AUTH_NETWORK,
-  UX_MODE,
-} from "@web3auth/base";
-import { OpenloginAdapter } from "@web3auth/openlogin-adapter";
+import { createContext, useContext, useEffect, useState } from "react";
+import { CHAIN_NAMESPACES, IProvider, WEB3AUTH_NETWORK } from "@web3auth/base";
 import { EthereumPrivateKeyProvider } from "@web3auth/ethereum-provider";
-import RPC from "@/utils/viemRPC";
+import { Web3Auth } from "@web3auth/modal";
+
+import RPC from "@/utils/ethersRPC";
 
 const clientId = process.env.NEXT_PUBLIC_WEB3AUTH_CLIENT_ID || "";
 
+const chainConfig = {
+  chainNamespace: CHAIN_NAMESPACES.EIP155,
+  chainId: "0xaa36a7",
+  rpcTarget: "https://rpc.ankr.com/eth_sepolia",
+  displayName: "Ethereum Sepolia Testnet",
+  blockExplorerUrl: "https://sepolia.etherscan.io",
+  ticker: "ETH",
+  tickerName: "Ethereum",
+  logo: "https://cryptologos.cc/logos/ethereum-eth-logo.png",
+};
+
+const privateKeyProvider = new EthereumPrivateKeyProvider({
+  config: { chainConfig },
+});
+
+const web3auth = new Web3Auth({
+  clientId,
+  web3AuthNetwork: WEB3AUTH_NETWORK.SAPPHIRE_DEVNET,
+  privateKeyProvider,
+});
+
 interface AuthContextProps {
-  web3auth: Web3AuthNoModal | null;
   provider: IProvider | null;
-  loggedIn: boolean | null;
+  status: string;
+  loggedIn: boolean;
+  user: any | null;
   login: () => Promise<void>;
   logout: () => Promise<void>;
-  authenticateUser: () => Promise<void>;
   getUserInfo: () => Promise<void>;
-  getChainId: () => Promise<void>;
   getAccounts: () => Promise<void>;
   getBalance: () => Promise<void>;
-  sendTransaction: () => Promise<void>;
   signMessage: () => Promise<void>;
-  getPrivateKey: () => Promise<void>;
+  sendTransaction: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextProps | undefined>(undefined);
 
-export const AuthProvider: React.FC<{ children: ReactNode }> = ({
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  const [web3auth, setWeb3auth] = useState<Web3AuthNoModal | null>(null);
   const [provider, setProvider] = useState<IProvider | null>(null);
-  const [loggedIn, setLoggedIn] = useState<boolean | null>(null);
+  const [status, setStatus] = useState("");
+  const [loggedIn, setLoggedIn] = useState(false);
+  const [user, setUser] = useState<any | null>(null);
 
   useEffect(() => {
     const init = async () => {
       try {
-        const chainConfig = {
-          chainNamespace: CHAIN_NAMESPACES.EIP155,
-          chainId: "0x1", // Mainnet
-          rpcTarget: "https://rpc.ankr.com/eth",
-          displayName: "Ethereum Mainnet",
-          blockExplorerUrl: "https://etherscan.io/",
-          ticker: "ETH",
-          tickerName: "Ethereum",
-          logo: "https://cryptologos.cc/logos/ethereum-eth-logo.png",
-        };
-
-        const privateKeyProvider = new EthereumPrivateKeyProvider({
-          config: { chainConfig },
-        });
-
-        const web3auth = new Web3AuthNoModal({
-          clientId,
-          web3AuthNetwork: WEB3AUTH_NETWORK.SAPPHIRE_DEVNET,
-          privateKeyProvider,
-        });
-
-        const openloginAdapter = new OpenloginAdapter({
-          loginSettings: { mfaLevel: "optional" },
-          adapterSettings: {
-            uxMode: UX_MODE.POPUP,
-            loginConfig: {
-              google: {
-                verifier: "onlycars-ethonline",
-                typeOfLogin: "google",
-                clientId: process.env.NEXT_PUBLIC_GOOGLE_OAUTH_CLIENT_ID,
-              },
-            },
-            mfaSettings: {
-              deviceShareFactor: { enable: true, priority: 1, mandatory: true },
-              backUpShareFactor: {
-                enable: true,
-                priority: 2,
-                mandatory: false,
-              },
-              socialBackupFactor: {
-                enable: true,
-                priority: 3,
-                mandatory: false,
-              },
-              passwordFactor: { enable: true, priority: 4, mandatory: true },
-            },
-          },
-        });
-
-        web3auth.configureAdapter(openloginAdapter);
-        setWeb3auth(web3auth);
-
-        await web3auth.init();
+        await web3auth.initModal();
+        console.log(web3auth.status);
+        setStatus(web3auth.status);
         setProvider(web3auth.provider);
 
         if (web3auth.connected) {
+          getUserInfo();
           setLoggedIn(true);
+        } else {
+          setLoggedIn(false);
         }
       } catch (error) {
         console.error(error);
@@ -116,124 +79,83 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   }, []);
 
   const login = async () => {
-    if (!web3auth) {
-      console.error("web3auth not initialized yet");
-      return;
-    }
-    const web3authProvider = await web3auth.connectTo(
-      WALLET_ADAPTERS.OPENLOGIN,
-      {
-        loginProvider: "google",
-      }
-    );
+    const web3authProvider = await web3auth.connect();
     setProvider(web3authProvider);
-    setLoggedIn(true);
-  };
-
-  const authenticateUser = async () => {
-    if (!web3auth) {
-      console.error("web3auth not initialized yet");
-      return;
+    if (web3auth.connected) {
+      getUserInfo();
+      setLoggedIn(true);
     }
-    const idToken = await web3auth.authenticateUser();
-    console.log(idToken);
-  };
-
-  const getUserInfo = async () => {
-    if (!web3auth) {
-      console.error("web3auth not initialized yet");
-      return;
-    }
-    const user = await web3auth.getUserInfo();
-    console.log(user);
   };
 
   const logout = async () => {
-    if (!web3auth) {
-      console.error("web3auth not initialized yet");
-      return;
-    }
     await web3auth.logout();
-    setLoggedIn(false);
     setProvider(null);
+    setLoggedIn(false);
+    uiConsole("logged out");
   };
 
-  const getChainId = async () => {
-    if (!provider) {
-      console.error("provider not initialized yet");
-      return;
-    }
-    const rpc = new RPC(provider);
-    const chainId = await rpc.getChainId();
-    console.log(chainId);
+  const getUserInfo = async () => {
+    const user = await web3auth.getUserInfo();
+    setUser(user);
+    console.log(user);
+    uiConsole(user);
   };
 
   const getAccounts = async () => {
     if (!provider) {
-      console.error("provider not initialized yet");
+      uiConsole("provider not initialized yet");
       return;
     }
-    const rpc = new RPC(provider);
-    const address = await rpc.getAccounts();
-    console.log(address);
+    const address = await RPC.getAccounts(provider);
+    uiConsole(address);
   };
 
   const getBalance = async () => {
     if (!provider) {
-      console.error("provider not initialized yet");
+      uiConsole("provider not initialized yet");
       return;
     }
-    const rpc = new RPC(provider);
-    const balance = await rpc.getBalance();
-    console.log(balance);
-  };
-
-  const sendTransaction = async () => {
-    if (!provider) {
-      console.error("provider not initialized yet");
-      return;
-    }
-    const rpc = new RPC(provider);
-    const receipt = await rpc.sendTransaction();
-    console.log(receipt);
+    const balance = await RPC.getBalance(provider);
+    uiConsole(balance);
   };
 
   const signMessage = async () => {
     if (!provider) {
-      console.error("provider not initialized yet");
+      uiConsole("provider not initialized yet");
       return;
     }
-    const rpc = new RPC(provider);
-    const signedMessage = await rpc.signMessage();
-    console.log(signedMessage);
+    const signedMessage = await RPC.signMessage(provider);
+    uiConsole(signedMessage);
   };
 
-  const getPrivateKey = async () => {
+  const sendTransaction = async () => {
     if (!provider) {
-      console.error("provider not initialized yet");
+      uiConsole("provider not initialized yet");
       return;
     }
-    const rpc = new RPC(provider);
-    const privateKey = await rpc.getPrivateKey();
-    console.log(privateKey);
+    uiConsole("Sending Transaction...");
+    const transactionReceipt = await RPC.sendTransaction(provider);
+    uiConsole(transactionReceipt);
   };
+
+  function uiConsole(...args: any[]): void {
+    console.log(...args);
+  }
 
   return (
     <AuthContext.Provider
       value={{
-        web3auth,
         provider,
+        status,
+        user,
         loggedIn,
         login,
         logout,
-        authenticateUser,
         getUserInfo,
-        getChainId,
         getAccounts,
         getBalance,
-        sendTransaction,
         signMessage,
-        getPrivateKey,
+        sendTransaction,
       }}
     >
       {children}
@@ -241,9 +163,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   );
 };
 
-export const useAuth = (): AuthContextProps => {
+export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (!context) {
+  if (context === undefined) {
     throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;

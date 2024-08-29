@@ -1,6 +1,6 @@
+/* eslint-disable @next/next/no-page-custom-font */
 import type { Metadata } from "next";
 import "./globals.css";
-import AppLayout from "@/layouts/AppLayout";
 import { AuthProvider } from "@/providers/AuthProvider";
 
 export const metadata: Metadata = {
@@ -14,11 +14,17 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body className="bg-gray-100">
-        <AuthProvider>
-          <AppLayout>{children}</AppLayout>
-        </AuthProvider>
+    <html lang="en" className="min-h-screen">
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap"
+          rel="stylesheet"
+        />
+      </head>
+      <body className="min-h-screen bg-black text-white">
+        <AuthProvider>{children}</AuthProvider>
       </body>
     </html>
   );
