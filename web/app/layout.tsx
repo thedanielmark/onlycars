@@ -2,6 +2,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { AuthProvider } from "@/providers/AuthProvider";
+// import { XMTPProvider } from "@xmtp/react-sdk";
 
 export const metadata: Metadata = {
   title: "OnlyCars",
@@ -24,7 +25,10 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-screen bg-black text-white">
-        <AuthProvider>{children}</AuthProvider>
+        <AuthProvider>
+          {/* <XMTPProvider>{children}</XMTPProvider> */}
+          {children}
+        </AuthProvider>
       </body>
     </html>
   );

@@ -4,20 +4,19 @@
 import {
   Disclosure,
   DisclosureButton,
-  DisclosurePanel,
+  // DisclosurePanel,
   Menu,
   MenuButton,
   MenuItem,
   MenuItems,
 } from "@headlessui/react";
 import { Bars3Icon, BellIcon, XMarkIcon } from "@heroicons/react/24/outline";
-import { ReactNode, useCallback, useEffect, useState } from "react";
+import { ReactNode, useEffect, useState } from "react";
 import { useAuth } from "@/providers/AuthProvider";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { IUserPayload } from "@/utils/types/IUserData";
 import { RotatingLines } from "react-loader-spinner";
-import { Client } from "@xmtp/xmtp-js";
 import { ethers, JsonRpcSigner } from "ethers";
 import {
   createConsentMessage,
@@ -121,6 +120,7 @@ const DashboardLayout = ({ children }: LayoutProps) => {
     if (user && address) {
       sendUserData(userPayload);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, address]);
 
   const fetchAddressStatus = async (address: string) => {
@@ -154,7 +154,6 @@ const DashboardLayout = ({ children }: LayoutProps) => {
 
         case 404: // Not Found
           setMessage("Address not found on XMTP network.");
-          connectToXMTP();
           break;
 
         case 500: // Internal Server Error
@@ -195,26 +194,37 @@ const DashboardLayout = ({ children }: LayoutProps) => {
   };
 
   const connectToXMTP = async () => {
-    const xmtp = await Client.create(wallet, {
-      env: "production",
-    });
-    console.log("XMTP client:", xmtp);
-
     // Get consent from user
     const timestamp = Date.now();
     const message = createConsentMessage(
       process.env.NEXT_PUBLIC_BROADCAST_ADDRESS || "",
       timestamp
     );
-
     console.log("Message:", message);
-
     const signature = await signMessage({
       account: address,
       message,
     });
     const payloadBytes = createConsentProofPayload(signature, timestamp);
     const base64Payload = Buffer.from(payloadBytes).toString("base64");
+
+    // Get device information
+    // Get device information
+    const browserInfo = {
+      userAgent: navigator.userAgent,
+      platform: navigator.platform,
+    };
+
+    const ipResponse = await fetch("https://api.ipify.org?format=json");
+    const ipData = await ipResponse.json();
+    const ipAddress = ipData.ip;
+
+    const deviceInfo = {
+      ipAddress,
+      browserInfo,
+    };
+
+    console.log("Device Info:", deviceInfo);
 
     const subscribeResponse = await fetch(
       `${process.env.NEXT_PUBLIC_API_ROUTE}/subscribe`,
@@ -227,12 +237,12 @@ const DashboardLayout = ({ children }: LayoutProps) => {
           address,
           broadcastAddress: process.env.NEXT_PUBLIC_BROADCAST_ADDRESS,
           consentProof: base64Payload,
+          deviceInfo,
         }),
       }
     );
     await subscribeResponse.json();
     setSubscriptionStatus(true);
-
     console.log("Subscription response:", subscribeResponse);
   };
 
@@ -359,7 +369,7 @@ const DashboardLayout = ({ children }: LayoutProps) => {
               </div>
             </div>
 
-            <DisclosurePanel className="sm:hidden">
+            {/* <DisclosurePanel className="sm:hidden">
               <div className="space-y-1 pb-3 pt-2">
                 {navigation.map((item) => (
                   <DisclosureButton
@@ -425,7 +435,7 @@ const DashboardLayout = ({ children }: LayoutProps) => {
                   </DisclosureButton>
                 </div>
               </div>
-            </DisclosurePanel>
+            </DisclosurePanel> */}
           </Disclosure>
 
           <div

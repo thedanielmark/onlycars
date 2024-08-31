@@ -13,8 +13,77 @@ function base64ToBytes(base64) {
   return bytes;
 }
 
+function parsePlatform(platform) {
+  const platformMap = {
+    MacIntel: "macOS",
+    Win32: "Windows",
+    "Linux x86_64": "Linux",
+    iPhone: "iOS",
+    iPad: "iOS",
+    Android: "Android",
+    // Add other platforms as needed
+  };
+
+  return platformMap[platform] || "Unknown Platform";
+}
+
+function parseUserAgent(userAgent) {
+  let browserName = "Unknown Browser";
+  let browserVersion = "Unknown Version";
+  let osName = "Unknown OS";
+
+  // Detect browser name and version
+  if (userAgent.includes("Chrome")) {
+    const match = userAgent.match(/Chrome\/(\d+)/);
+    browserName = "Chrome";
+    browserVersion = match ? match[1] : "Unknown Version";
+  } else if (userAgent.includes("Safari") && !userAgent.includes("Chrome")) {
+    const match = userAgent.match(/Version\/(\d+)/);
+    browserName = "Safari";
+    browserVersion = match ? match[1] : "Unknown Version";
+  } else if (userAgent.includes("Firefox")) {
+    const match = userAgent.match(/Firefox\/(\d+)/);
+    browserName = "Firefox";
+    browserVersion = match ? match[1] : "Unknown Version";
+  } else if (userAgent.includes("MSIE") || userAgent.includes("Trident")) {
+    browserName = "Internet Explorer";
+    browserVersion = userAgent.match(/(MSIE|rv:)(\d+)/)[2] || "Unknown Version";
+  } else if (userAgent.includes("Edge")) {
+    const match = userAgent.match(/Edge\/(\d+)/);
+    browserName = "Edge";
+    browserVersion = match ? match[1] : "Unknown Version";
+  }
+
+  // Detect OS name
+  if (userAgent.includes("Macintosh")) {
+    osName = "macOS";
+  } else if (userAgent.includes("Windows")) {
+    osName = "Windows";
+  } else if (userAgent.includes("Linux")) {
+    osName = "Linux";
+  } else if (userAgent.includes("Android")) {
+    osName = "Android";
+  } else if (userAgent.includes("like Mac OS X")) {
+    osName = "iOS";
+  }
+
+  return {
+    browserName,
+    browserVersion,
+    osName,
+  };
+}
+
+function generateLoginNotification({ ipAddress, browserInfo }) {
+  const { userAgent, platform } = browserInfo;
+  const { browserName, browserVersion, osName } = parseUserAgent(userAgent);
+  const parsedPlatform = parsePlatform(platform);
+
+  return `Security Alert: New Login Detected\n\nWe have detected a new login to your account from a device using ${browserName} (version ${browserVersion}) on ${osName}. The login originated from the IP address ${ipAddress}.\n\nIf this was you, no further action is required. If you did not initiate this login, please secure your account immediately.\n\nThank you for ensuring your account's safety.`;
+}
+
 router.post("/", async (req, res) => {
-  const { address, broadcastAddress, consentProof } = req.body;
+  const { address, broadcastAddress, consentProof, deviceInfo } = req.body;
 
   // Validate request body
   if (typeof address !== "string") {
@@ -64,9 +133,7 @@ router.post("/", async (req, res) => {
     console.log("Conversation created:", conversation.topic);
 
     // Send greeting message
-    await conversation.send(
-      "You are now subscribed to receive updates from OnlyCars on any XMTP enabled platform!"
-    );
+    await conversation.send(generateLoginNotification(deviceInfo));
     res.status(200).send({ topic: conversation.topic });
   } catch (err) {
     console.error("Error:", err);
