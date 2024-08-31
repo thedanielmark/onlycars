@@ -46,6 +46,17 @@ const getBalance = async (provider: IProvider): Promise<string> => {
   }
 };
 
+const getSigner = async (provider: IProvider): Promise<any> => {
+  try {
+    const ethersProvider = new ethers.BrowserProvider(provider);
+    const signer = await ethersProvider.getSigner();
+
+    return signer;
+  } catch (error) {
+    return error as string;
+  }
+};
+
 const sendTransaction = async (provider: IProvider): Promise<any> => {
   try {
     const ethersProvider = new ethers.BrowserProvider(provider);
@@ -72,7 +83,7 @@ const sendTransaction = async (provider: IProvider): Promise<any> => {
   }
 };
 
-const signMessage = async (provider: IProvider): Promise<any> => {
+const signMessage = async (provider: IProvider, message: any): Promise<any> => {
   try {
     // For ethers v5
     // const ethersProvider = new ethers.providers.Web3Provider(provider);
@@ -81,12 +92,26 @@ const signMessage = async (provider: IProvider): Promise<any> => {
     // For ethers v5
     // const signer = ethersProvider.getSigner();
     const signer = await ethersProvider.getSigner();
-    const originalMessage = "YOUR_MESSAGE";
+    // const originalMessage = "YOUR_MESSAGE";
 
     // Sign the message
-    const signedMessage = await signer.signMessage(originalMessage);
+    const signedMessage = await signer.signMessage(JSON.stringify(message));
+
+    console.log("Signed Message: ", signedMessage);
 
     return signedMessage;
+  } catch (error) {
+    return error as string;
+  }
+};
+
+const getPrivateKey = async (provider: IProvider): Promise<any> => {
+  try {
+    const privateKey = await provider.request({
+      method: "eth_private_key",
+    });
+
+    return privateKey;
   } catch (error) {
     return error as string;
   }
@@ -96,6 +121,8 @@ export default {
   getChainId,
   getAccounts,
   getBalance,
+  getSigner,
   sendTransaction,
   signMessage,
+  getPrivateKey,
 };

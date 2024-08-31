@@ -36,13 +36,16 @@ interface AuthContextProps {
   status: string;
   loggedIn: boolean;
   user: any | null;
+  address: string;
   login: () => Promise<void>;
   logout: () => Promise<void>;
   getUserInfo: () => Promise<void>;
   getAccounts: () => Promise<void>;
   getBalance: () => Promise<void>;
-  signMessage: () => Promise<void>;
+  getSigner: () => Promise<void> | any;
+  signMessage: (message: any) => Promise<void | any>;
   sendTransaction: () => Promise<void>;
+  getPrivateKey: () => Promise<void> | any;
 }
 
 const AuthContext = createContext<AuthContextProps | undefined>(undefined);
@@ -54,6 +57,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const [status, setStatus] = useState("");
   const [loggedIn, setLoggedIn] = useState(false);
   const [user, setUser] = useState<any | null>(null);
+  const [address, setAddress] = useState<string | any>(null);
 
   useEffect(() => {
     const init = async () => {
@@ -65,6 +69,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
         if (web3auth.connected) {
           getUserInfo();
+          getAccounts();
+          getPrivateKey();
           setLoggedIn(true);
         } else {
           setLoggedIn(false);
@@ -75,13 +81,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     };
 
     init();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // 0xf48C5aBD5596d6F80abb0c3a8F061A0BaB29ee5f
+  // 0xf48C5aBD5596d6F80abb0c3a8F061A0BaB29ee5f
 
   const login = async () => {
     const web3authProvider = await web3auth.connect();
     setProvider(web3authProvider);
     if (web3auth.connected) {
       getUserInfo();
+      getAccounts();
       setLoggedIn(true);
     }
   };
@@ -102,7 +113,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const getAccounts = async () => {
     if (!provider) {
-      uiConsole("provider not initialized yet");
+      const web3authProvider = await web3auth.connect();
+      if (web3authProvider !== null) {
+        const addressFromProvider = await RPC.getAccounts(web3authProvider);
+        setAddress(addressFromProvider);
+        uiConsole("Line 115", addressFromProvider);
+      }
+      uiConsole("hehe fix provider not initialized yet");
       return;
     }
     const address = await RPC.getAccounts(provider);
@@ -118,13 +135,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     uiConsole(balance);
   };
 
-  const signMessage = async () => {
+  const getSigner = async () => {
     if (!provider) {
       uiConsole("provider not initialized yet");
       return;
     }
-    const signedMessage = await RPC.signMessage(provider);
+    const signer = await RPC.getSigner(provider);
+    uiConsole(signer);
+    return signer;
+  };
+
+  const signMessage = async (message: any) => {
+    if (!provider) {
+      uiConsole("provider not initialized yet");
+      return;
+    }
+    console.log(message);
+    const signedMessage = await RPC.signMessage(provider, message);
     uiConsole(signedMessage);
+    return signedMessage;
   };
 
   const sendTransaction = async () => {
@@ -137,6 +166,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     uiConsole(transactionReceipt);
   };
 
+  const getPrivateKey = async () => {
+    if (!provider) {
+      const web3authProvider = await web3auth.connect();
+      if (web3authProvider !== null) {
+        const privateKeyFromProvider = await RPC.getPrivateKey(
+          web3authProvider
+        );
+        setAddress(privateKeyFromProvider);
+        uiConsole("Line 177", privateKeyFromProvider);
+      }
+      uiConsole("Provider not initialized yet");
+      return;
+    }
+    const privateKeyFromProvider = await RPC.getPrivateKey(provider);
+    uiConsole(privateKeyFromProvider);
+  };
+
   function uiConsole(...args: any[]): void {
     console.log(...args);
   }
@@ -147,14 +193,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         provider,
         status,
         user,
+        address,
         loggedIn,
         login,
         logout,
         getUserInfo,
         getAccounts,
         getBalance,
+        getSigner,
         signMessage,
         sendTransaction,
+        getPrivateKey,
       }}
     >
       {children}

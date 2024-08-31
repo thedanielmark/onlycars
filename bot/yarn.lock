@@ -450,6 +450,11 @@
     satori "0.10.9"
     yoga-wasm-web "0.3.3"
 
+"@xmtp/broadcast-sdk@^0.2.0":
+  version "0.2.0"
+  resolved "https://registry.npmjs.org/@xmtp/broadcast-sdk/-/broadcast-sdk-0.2.0.tgz#975bb002fc050bae53da6b389972d8b2bf3189da"
+  integrity sha512-4Bz2ENCtn5oxfC+RInpoFHsVmqw9yT6CMSuNnrUvdrHKth5j48dylBeFvgHOPAZJ1X1vSzCmE4pkKeQo7aWMVw==
+
 "@xmtp/consent-proof-signature@^0.1.3":
   version "0.1.3"
   resolved "https://registry.npmjs.org/@xmtp/consent-proof-signature/-/consent-proof-signature-0.1.3.tgz#19f05c353fdece52a1ab9cce197c60587dc47e78"

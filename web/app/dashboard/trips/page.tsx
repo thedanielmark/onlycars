@@ -1,7 +1,7 @@
 "use client";
 
-function WalletPage() {
-  return <>Wallet</>;
+function TripsPage() {
+  return <>Trips</>;
 }
 
-export default WalletPage;
+export default TripsPage;
