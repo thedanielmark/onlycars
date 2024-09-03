@@ -262,7 +262,7 @@ const DashboardLayout = ({ children }: LayoutProps) => {
         </div>
       ) : (
         <div
-          className="min-h-full h-full w-full overflow-x-hidden"
+          className="min-h-full h-full w-full"
           style={
             pathname === "/dashboard"
               ? { overflow: "hidden" }

@@ -100,6 +100,16 @@ function DashboardPage() {
   const [PopUpData, setPopUpData] = useState<any>();
   const customInput = useInput("");
 
+  function handlePopUpData(data: any) {
+    setPopUpData(data);
+    console.log(data);
+  }
+
+  function handleShowPopUp() {
+    setShowPopUp(true);
+    console.log("Show Pop Up");
+  }
+
   useEffect(() => {
     if (chargers.length > 0) {
       console.log("Chargers", chargers);
@@ -154,159 +164,6 @@ function DashboardPage() {
         minHeight: "calc(-64px + 100vh)",
       }}
     >
-      {/* <div className="absolute m-3 bg-zinc-900/70 rounded-xl overflow-hidden z-50">
-        <div className="max-w-3xl p-5 bg-black shadow-lg">
-          <div className="w-full">
-            <Combobox
-              as="div"
-              value={gitHubProfile}
-              onChange={(selectedGitHubProfile) => {
-                setGitHubUsernameQuery("");
-                setGitHubProfile(selectedGitHubProfile ?? undefined);
-              }}
-            >
-              <div className="relative">
-                <ComboboxInput
-                  className="w-full rounded-md border-0 bg-zinc-900 py-1.5 pl-3 pr-12 text-zinc-900 shadow-sm ring-1 ring-inset ring-zinc-800 focus:ring-2 focus:ring-inset focus:ring-purple-600 sm:text-sm sm:leading-6"
-                  onChange={(event) =>
-                    setGitHubUsernameQuery(event.target.value)
-                  }
-                  onBlur={() => setGitHubUsernameQuery("")}
-                  displayValue={(gitHubUser) =>
-                    gitHubUser?.login || ""
-                  }
-                  placeholder="Type to search"
-                />
-                <ComboboxButton className="absolute inset-y-0 right-0 flex items-center rounded-r-md px-2 focus:outline-none">
-                  <MagnifyingGlassIcon
-                    className="h-5 w-5 text-zinc-400"
-                    aria-hidden="true"
-                  />
-                </ComboboxButton>
-
-                {filteredGitHubProfiles.length > 0 && (
-                  <ComboboxOptions className="absolute z-10 mt-1 max-h-56 w-full overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm">
-                    {filteredGitHubProfiles.map((gitHubProfile) => (
-                      <ComboboxOption
-                        key={gitHubProfile.id}
-                        value={gitHubProfile}
-                        className="group relative cursor-default select-none py-2 pl-3 pr-9 text-zinc-900 data-[focus]:bg-purple-600 data-[focus]:text-white"
-                      >
-                        <div className="flex items-center">
-                          <img
-                            src={gitHubProfile.avatar_url}
-                            alt=""
-                            className="h-6 w-6 flex-shrink-0 rounded-full"
-                          />
-                          <span className="ml-3 truncate group-data-[selected]:font-semibold">
-                            {gitHubProfile.login}
-                          </span>
-                        </div>
-
-                        <span className="absolute inset-y-0 right-0 hidden items-center pr-4 text-purple-600 group-data-[selected]:flex group-data-[focus]:text-white">
-                          <CheckIcon className="h-5 w-5" aria-hidden="true" />
-                        </span>
-                      </ComboboxOption>
-                    ))}
-                  </ComboboxOptions>
-                )}
-              </div>
-            </Combobox>
-          </div>
-        </div>
-      </div> */}
-      {showPopUp && (
-        <div className="absolute top-3 left-3 bg-black px-5 py-3 rounded-md shadow-lg border border-zinc-800">
-          <XMarkIcon
-            className="h-6 w-6 text-zinc-400 absolute top-3 right-3 cursor-pointer"
-            aria-hidden="true"
-            onClick={() => setShowPopUp(false)}
-          />
-          {PopUpData?.AddressInfo.AddressLine1 && (
-            <div className="font-semibold text-white tracking-tight text-xl pr-8 max-w-lg">
-              {PopUpData?.AddressInfo.AddressLine1}
-            </div>
-          )}
-          {PopUpData?.AddressInfo.Title && (
-            <div className="text-zinc-400 text-sm">
-              {PopUpData?.AddressInfo.Title}
-            </div>
-          )}
-
-          <div className="my-3 border-b border-zinc-800" />
-
-          <div className="font-medium text-zinc-200 text-sm">
-            Charging Unit(s)
-          </div>
-          <div className="mt-2 flex items-center gap-x-2 font-medium text-zinc-500 text-sm">
-            <img
-              src="/logo.png"
-              width={100}
-              height={100}
-              alt="Logo"
-              className="h-4 w-4"
-            />
-            <span>
-              {/* Print out all the connections here */}
-              {PopUpData?.Connections.map((connection: any) => (
-                <span key={connection.ID}>{connection.Level.Title}</span>
-              ))}
-            </span>
-          </div>
-
-          <div className="my-3 border-b border-zinc-800" />
-
-          <div className="font-medium text-zinc-200 text-base">Address</div>
-          <table className="mt-1">
-            <tbody>
-              {PopUpData?.AddressInfo.Town && (
-                <tr>
-                  <td className="text-zinc-500 text-sm">Town</td>
-                  <td className="text-zinc-200 text-sm pl-3">
-                    {PopUpData?.AddressInfo.Town}
-                  </td>
-                </tr>
-              )}
-              {PopUpData?.AddressInfo.StateOrProvince && (
-                <tr>
-                  <td className="text-zinc-500 text-sm">State/Province</td>
-                  <td className="text-zinc-200 text-sm pl-3">
-                    {PopUpData?.AddressInfo.StateOrProvince}
-                  </td>
-                </tr>
-              )}
-              {PopUpData?.AddressInfo.Postcode && (
-                <tr>
-                  <td className="text-zinc-500 text-sm">Postcode</td>
-                  <td className="text-zinc-200 text-sm pl-3">
-                    {PopUpData?.AddressInfo.Postcode}
-                  </td>
-                </tr>
-              )}
-              {PopUpData?.AddressInfo.Country.Title && (
-                <tr>
-                  <td className="text-zinc-500 text-sm">Country</td>
-                  <td className="text-zinc-200 text-sm pl-3">
-                    {PopUpData?.AddressInfo.Country.Title}
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-
-          <div className="mt-8 mb-3">
-            <Link
-              href={`https://www.google.com/maps/search/?api=1&query=${PopUpData?.AddressInfo.Latitude}%2C${PopUpData?.AddressInfo.Longitude}`}
-              target="_blank"
-              passHref={true}
-              className="w-full block text-center rounded-md bg-sky-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-sky-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-600"
-            >
-              Start Driving
-            </Link>
-          </div>
-        </div>
-      )}
-
       <div className="absolute w-96 top-0 left-0 m-3 p-3 bg-black rounded-xl overflow-hidden z-50">
         <input
           {...customInput}
@@ -333,6 +190,105 @@ function DashboardPage() {
             ))}
           </div>
         )}
+
+        {showPopUp && (
+          <div className="bg-black mt-5 px-2">
+            <div className="flex items-start justify-between">
+              <div>
+                {PopUpData?.AddressInfo.AddressLine1 && (
+                  <div className="font-semibold text-white tracking-tight text-xl pr-8 max-w-lg">
+                    {PopUpData?.AddressInfo.AddressLine1}
+                  </div>
+                )}
+                {PopUpData?.AddressInfo.Title && (
+                  <div className="text-zinc-400 text-sm">
+                    {PopUpData?.AddressInfo.Title}
+                  </div>
+                )}
+              </div>
+
+              <div className="h-6 w-6">
+                <XMarkIcon
+                  className="h-6 w-6 text-zinc-400 cursor-pointer"
+                  aria-hidden="true"
+                  onClick={() => setShowPopUp(false)}
+                />
+              </div>
+            </div>
+
+            <div className="my-3 border-b border-zinc-800" />
+
+            <div className="font-medium text-zinc-200 text-sm">
+              Charging Unit(s)
+            </div>
+            <div className="mt-2 flex items-center gap-x-2 font-medium text-zinc-200 text-sm">
+              <img
+                src="/logo.png"
+                width={100}
+                height={100}
+                alt="Logo"
+                className="h-4 w-4"
+              />
+              <div className="gap-y-1">
+                {/* Print out all the connections here */}
+                {PopUpData?.Connections.map((connection: any) => (
+                  <span key={connection.ID}>{connection.Level.Title}</span>
+                ))}
+              </div>
+            </div>
+
+            <div className="my-3 border-b border-zinc-800" />
+
+            <div className="font-medium text-zinc-200 text-base">Address</div>
+            <table className="mt-1">
+              <tbody>
+                {PopUpData?.AddressInfo.Town && (
+                  <tr>
+                    <td className="text-zinc-500 text-sm">Town</td>
+                    <td className="text-zinc-200 text-sm pl-3">
+                      {PopUpData?.AddressInfo.Town}
+                    </td>
+                  </tr>
+                )}
+                {PopUpData?.AddressInfo.StateOrProvince && (
+                  <tr>
+                    <td className="text-zinc-500 text-sm">State/Province</td>
+                    <td className="text-zinc-200 text-sm pl-3">
+                      {PopUpData?.AddressInfo.StateOrProvince}
+                    </td>
+                  </tr>
+                )}
+                {PopUpData?.AddressInfo.Postcode && (
+                  <tr>
+                    <td className="text-zinc-500 text-sm">Postcode</td>
+                    <td className="text-zinc-200 text-sm pl-3">
+                      {PopUpData?.AddressInfo.Postcode}
+                    </td>
+                  </tr>
+                )}
+                {PopUpData?.AddressInfo.Country.Title && (
+                  <tr>
+                    <td className="text-zinc-500 text-sm">Country</td>
+                    <td className="text-zinc-200 text-sm pl-3">
+                      {PopUpData?.AddressInfo.Country.Title}
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+
+            <div className="mt-8 mb-1">
+              <Link
+                href={`https://www.google.com/maps/search/?api=1&query=${PopUpData?.AddressInfo.Latitude}%2C${PopUpData?.AddressInfo.Longitude}`}
+                target="_blank"
+                passHref={true}
+                className="w-full block text-center rounded-md bg-sky-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-sky-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-600"
+              >
+                Start Driving
+              </Link>
+            </div>
+          </div>
+        )}
       </div>
 
       {!location && chargers.length === 0 && (
@@ -353,8 +309,8 @@ function DashboardPage() {
         <MapBox
           location={location}
           chargers={chargers}
-          setPopUpData={setPopUpData}
-          setShowPopUp={setShowPopUp}
+          sendPopUpData={handlePopUpData}
+          sendShowPopUp={handleShowPopUp}
         />
       )}
 
