@@ -7,6 +7,7 @@ import useInput from "@/utils/useInput";
 import { XMarkIcon } from "@heroicons/react/24/outline";
 import Link from "next/link";
 import { ICharger } from "@/utils/types/ICharger";
+import { RotatingLines } from "react-loader-spinner";
 
 interface ISuggestion {
   place_name: string;
@@ -97,7 +98,7 @@ function DashboardPage() {
   const [address, setAddress] = useState<string | null>(null);
   const [showPopUp, setShowPopUp] = useState(false);
   const [PopUpData, setPopUpData] = useState<any>();
-  const input = useInput("");
+  const customInput = useInput("");
 
   useEffect(() => {
     if (chargers.length > 0) {
@@ -147,7 +148,12 @@ function DashboardPage() {
   }, []);
 
   return (
-    <div className="relative">
+    <div
+      className="relative w-full h-full"
+      style={{
+        minHeight: "calc(-64px + 100vh)",
+      }}
+    >
       {/* <div className="absolute m-3 bg-zinc-900/70 rounded-xl overflow-hidden z-50">
         <div className="max-w-3xl p-5 bg-black shadow-lg">
           <div className="w-full">
@@ -301,22 +307,22 @@ function DashboardPage() {
         </div>
       )}
 
-      <div className="absolute w-96 m-3 p-3 bg-black rounded-xl overflow-hidden z-50">
+      <div className="absolute w-96 top-0 left-0 m-3 p-3 bg-black rounded-xl overflow-hidden z-50">
         <input
-          {...input}
+          {...customInput}
           className="block w-full rounded-md border-0 py-1.5 bg-zinc-900 text-white shadow-sm ring-1 ring-inset ring-zinc-800 placeholder:text-zinc-400 focus:ring-2 focus:ring-inset focus:ring-sky-600 sm:text-sm sm:leading-6"
           placeholder="Search for an address..."
         />
-        {input.suggestions?.length > 0 && (
+        {customInput.suggestions?.length > 0 && (
           <div className="mt-2 block w-full border-0 p-0 text-zinc-200 placeholder:text-zinc-400 focus:ring-0 sm:text-sm sm:leading-6">
-            {input.suggestions.map((suggestion: ISuggestion, index) => (
+            {customInput.suggestions.map((suggestion: ISuggestion, index) => (
               <div
                 key={index}
                 onClick={() => {
-                  input.setValue(suggestion.place_name);
+                  customInput.setValue(suggestion.place_name);
                   // Assume `setCenter` is defined elsewhere
                   // setCenter(suggestion.center);
-                  input.setSuggestions([]);
+                  customInput.setSuggestions([]);
                   setAddress(suggestion.place_name);
                   // setLocation(suggestion.place_name);
                 }}
@@ -328,6 +334,20 @@ function DashboardPage() {
           </div>
         )}
       </div>
+
+      {!location && chargers.length === 0 && (
+        <div className="min-h-screen flex items-center justify-center gap-x-3">
+          <RotatingLines
+            visible={true}
+            width="20"
+            strokeColor="#ffffff"
+            strokeWidth="5"
+            animationDuration="0.75"
+            ariaLabel="rotating-lines-loading"
+          />
+          <span className="font-medium">Finding EV chargers near you</span>
+        </div>
+      )}
 
       {location && chargers.length > 0 && (
         <MapBox
