@@ -1,8 +1,20 @@
+/* eslint-disable @next/next/no-img-element */
 "use client";
 
-import { useState } from "react";
-import { Radio, RadioGroup } from "@headlessui/react";
+import { useEffect, useState } from "react";
+import {
+  Combobox,
+  ComboboxButton,
+  ComboboxInput,
+  ComboboxOption,
+  ComboboxOptions,
+  Label,
+  Radio,
+  RadioGroup,
+} from "@headlessui/react";
 import { CheckCircleIcon } from "@heroicons/react/20/solid";
+import { CheckIcon, MagnifyingGlassIcon } from "@heroicons/react/24/outline";
+import { connect } from "http2";
 
 const chargersList = [
   {
@@ -88,18 +100,82 @@ function RegisterVehiclePage() {
   );
   const [selectedRapidConnectorsList, setSelectedRapidConnectorsList] =
     useState(rapidConnectorsList[0]);
-
   const [selectedFastConnectorsList, setSelectedFastConnectorsList] = useState(
     fastConnectorsList[0]
   );
-
   const [selectedSlowConnectorsList, setSelectedSlowConnectorsList] = useState(
     slowConnectorsList[0]
   );
+  const [inputs, setInputs] = useState<any>({
+    deviceDefinitionId: "",
+    make: "",
+    model: "",
+    year: "",
+    chargerType: selectedChargersList.type,
+    connectorType: selectedRapidConnectorsList.type,
+  });
+  const [vehicleProfile, setVehicleProfile] = useState<any>({});
+  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [vehiclesList, setVehiclesList] = useState([]);
+  const [filteredVehicleProfiles, setFilteredVehicleProfiles] = useState([]);
+
+  useEffect(() => {
+    if (vehiclesList.length > 0) {
+      const filteredVehicleProfilesTemp = vehiclesList.filter(
+        (vehicleProfile: { id: string }) => {
+          return vehicleProfile.id
+            .toLowerCase()
+            .includes(searchQuery.toLowerCase());
+        }
+      );
+
+      // eslint-disable-next-line no-console
+      console.log("Filtered Vehicle Profiles: ", filteredVehicleProfilesTemp);
+      setFilteredVehicleProfiles(filteredVehicleProfilesTemp);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [vehiclesList]);
+
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      async function getUsers() {
+        fetch(
+          `${process.env.NEXT_PUBLIC_DIMO_API_URL}/device-definitions/search?query=${searchQuery}`
+        ).then((response) => {
+          response.json().then((data) => {
+            setVehiclesList(data.deviceDefinitions);
+          });
+        });
+      }
+      if (searchQuery) getUsers();
+    }, 0.5);
+
+    return () => clearTimeout(timeout);
+  }, [searchQuery]);
+
+  useEffect(() => {
+    console.log(searchQuery);
+    console.log(inputs);
+  }, [searchQuery, inputs]);
+
+  // Setting the make, model and year of the vehicle based on the selected vehicle profile
+  useEffect(() => {
+    if (vehicleProfile) {
+      setInputs({
+        ...inputs,
+        deviceDefinitionId: vehicleProfile.legacy_ksuid,
+        make: vehicleProfile.make,
+        model: vehicleProfile.model,
+        year: vehicleProfile.year,
+      });
+      // eslint-disable-next-line no-console
+      console.log("Selected Vehicle Profile: ", vehicleProfile);
+    }
+  }, [vehicleProfile]);
 
   return (
     <>
-      <div className="mt-10 space-y-6 sm:px-6 lg:col-span-9 lg:px-0">
+      <div className="my-10 space-y-6 sm:px-6 lg:col-span-9 lg:px-0">
         <form action="#" method="POST">
           <div className="shadow sm:overflow-hidden sm:rounded-md">
             <div className="space-y-6 bg-zinc-900/70 border border-zinc-800 px-4 py-6 sm:p-6 overflow-hidden">
@@ -133,6 +209,84 @@ function RegisterVehiclePage() {
                   </div>
                 </div>
                 {/* Name end */}
+
+                {/* Search start */}
+                <div className="col-span-3 sm:col-span-3">
+                  <Combobox
+                    as="div"
+                    className="rounded-md px-3 pb-1.5 pt-2.5 shadow-sm ring-1 ring-inset ring-zinc-800 focus-within:ring-2 focus-within:ring-sky-600"
+                    value={vehicleProfile}
+                    onChange={(selectedVehicleProfile) => {
+                      setSearchQuery("");
+                      setVehicleProfile(selectedVehicleProfile ?? undefined);
+                    }}
+                  >
+                    <Label className="block text-xs font-medium text-zinc-200">
+                      Enter the make or model of your vehicle
+                    </Label>
+                    <div className="relative mt-2">
+                      <ComboboxInput
+                        className="block w-full border-0 p-0 bg-transparent text-white placeholder:text-zinc-400 focus:ring-0 sm:text-sm sm:leading-6"
+                        onChange={(event) => setSearchQuery(event.target.value)}
+                        onBlur={() => setSearchQuery("")}
+                        displayValue={(vehicle: { name?: string }) =>
+                          vehicle?.name || ""
+                        }
+                        placeholder="Nissan X-Trail 2024"
+                      />
+                      <ComboboxButton className="absolute inset-y-0 right-0 flex items-center rounded-r-md px-2 focus:outline-none">
+                        <MagnifyingGlassIcon
+                          className="h-5 w-5 text-zinc-400"
+                          aria-hidden="true"
+                        />
+                      </ComboboxButton>
+
+                      {filteredVehicleProfiles.length > 0 && (
+                        <ComboboxOptions className="absolute z-10 mt-1 max-h-56 w-full overflow-auto rounded-md bg-zinc-900 py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm">
+                          {filteredVehicleProfiles.map(
+                            (vehicleProfile: any) => (
+                              <ComboboxOption
+                                key={vehicleProfile.id}
+                                value={vehicleProfile}
+                                className="group relative cursor-default select-none py-2 pl-3 pr-9 text-zinc-200 data-[focus]:bg-sky-600 data-[focus]:text-white"
+                              >
+                                <div className="flex items-center">
+                                  {vehicleProfile.imageUrl ? (
+                                    <img
+                                      src={vehicleProfile.imageUrl}
+                                      alt=""
+                                      className="h-6 w-6 flex-shrink-0 rounded-full"
+                                    />
+                                  ) : (
+                                    <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-zinc-500">
+                                      <span className="font-medium leading-none text-white text-xs">
+                                        {`${vehicleProfile.make.charAt(
+                                          0
+                                        )}${vehicleProfile.model.charAt(0)}`}
+                                      </span>
+                                    </span>
+                                  )}
+                                  <span className="ml-3 truncate group-data-[selected]:font-semibold">
+                                    {vehicleProfile.name}
+                                  </span>
+                                </div>
+
+                                <span className="absolute inset-y-0 right-0 hidden items-center pr-4 text-sky-600 group-data-[selected]:flex group-data-[focus]:text-white">
+                                  <CheckIcon
+                                    className="h-5 w-5"
+                                    aria-hidden="true"
+                                  />
+                                </span>
+                              </ComboboxOption>
+                            )
+                          )}
+                        </ComboboxOptions>
+                      )}
+                    </div>
+                  </Combobox>
+                </div>
+                {/* Search end */}
+
                 {/* Make start */}
                 <div className="col-span-3 sm:col-span-1">
                   <div className="rounded-md px-3 pb-1.5 pt-2.5 shadow-sm ring-1 ring-inset ring-zinc-800 focus-within:ring-2 focus-within:ring-sky-600">
@@ -146,8 +300,10 @@ function RegisterVehiclePage() {
                       id="name"
                       name="name"
                       type="text"
+                      value={inputs.make || ""}
+                      disabled={true}
                       placeholder="Lexus"
-                      className="block w-full border-0 p-0 bg-transparent text-white placeholder:text-zinc-400 focus:ring-0 sm:text-sm sm:leading-6"
+                      className="block w-full border-0 p-0 bg-transparent text-white placeholder:text-zinc-400 focus:ring-0 sm:text-sm sm:leading-6 cursor-not-allowed"
                     />
                   </div>
                 </div>
@@ -165,8 +321,10 @@ function RegisterVehiclePage() {
                       id="name"
                       name="name"
                       type="text"
+                      value={inputs.model || ""}
+                      disabled={true}
                       placeholder="RX 350"
-                      className="block w-full border-0 p-0 bg-transparent text-white placeholder:text-zinc-400 focus:ring-0 sm:text-sm sm:leading-6"
+                      className="block w-full border-0 p-0 bg-transparent text-white placeholder:text-zinc-400 focus:ring-0 sm:text-sm sm:leading-6 cursor-not-allowed"
                     />
                   </div>
                 </div>
@@ -184,8 +342,10 @@ function RegisterVehiclePage() {
                       id="name"
                       name="name"
                       type="text"
+                      value={inputs.year || ""}
+                      disabled={true}
                       placeholder="2024"
-                      className="block w-full border-0 p-0 bg-transparent text-white placeholder:text-zinc-400 focus:ring-0 sm:text-sm sm:leading-6"
+                      className="block w-full border-0 p-0 bg-transparent text-white placeholder:text-zinc-400 focus:ring-0 sm:text-sm sm:leading-6 cursor-not-allowed"
                     />
                   </div>
                 </div>

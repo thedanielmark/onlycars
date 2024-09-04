@@ -12,7 +12,7 @@ const clientId = process.env.NEXT_PUBLIC_WEB3AUTH_CLIENT_ID || "";
 
 const chainConfig = {
   chainNamespace: CHAIN_NAMESPACES.EIP155,
-  chainId: "0xaa36a7",
+  chainId: "0xAA36A7",
   rpcTarget:
     "https://eth-sepolia.g.alchemy.com/v2/4aXwWgRAyOxgQdQftRqG7yJ5LMumJwmP",
   displayName: "Ethereum Sepolia Testnet",
@@ -47,6 +47,7 @@ interface AuthContextProps {
   signMessage: (message: any) => Promise<void | any>;
   sendTransaction: () => Promise<void>;
   getPrivateKey: () => Promise<void> | any;
+  readContract: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextProps | undefined>(undefined);
@@ -184,6 +185,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     uiConsole(privateKeyFromProvider);
   };
 
+  const readContract = async () => {
+    if (!provider) {
+      uiConsole("provider not initialized yet");
+      return;
+    }
+    const message = await RPC.readContract(provider);
+    uiConsole(message);
+  };
+
+  // const writeContract = async () => {
+  //   if (!provider) {
+  //     uiConsole("provider not initialized yet");
+  //     return;
+  //   }
+  //   const receipt = await RPC.writeContract();
+  //   uiConsole(receipt);
+  //   if (receipt) {
+  //     setTimeout(async () => {
+  //       await readContract();
+  //     }, 10000);
+  //   }
+  // };
+
   function uiConsole(...args: any[]): void {
     console.log(...args);
   }
@@ -205,6 +229,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         signMessage,
         sendTransaction,
         getPrivateKey,
+        readContract,
       }}
     >
       {children}
