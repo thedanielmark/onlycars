@@ -1,0 +1,54 @@
+type OnlyCars_Approval {
+  id: ID!
+  owner: String!
+  approved: String!
+  tokenId: BigInt!
+}
+
+type OnlyCars_ApprovalForAll {
+  id: ID!
+  owner: String!
+  operator: String!
+  approved: Boolean!
+}
+
+type OnlyCars_BalanceTopUp {
+  id: ID!
+  user: String!
+  amount: BigInt!
+}
+
+type OnlyCars_StationRegistered {
+  id: ID!
+  stationId: BigInt!
+  owner: String!
+  metadata: String!
+}
+
+type OnlyCars_StationReported {
+  id: ID!
+  stationId: BigInt!
+  reporter: String!
+  issue: String!
+}
+
+type OnlyCars_StationUsed {
+  id: ID!
+  stationId: BigInt!
+  vehicleId: BigInt!
+  amount: BigInt!
+}
+
+type OnlyCars_Transfer {
+  id: ID!
+  from: String!
+  to: String!
+  tokenId: BigInt!
+}
+
+type OnlyCars_VehicleRegistered {
+  id: ID!
+  vehicleId: BigInt!
+  owner: String!
+}
+

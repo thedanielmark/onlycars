@@ -1,0 +1,20 @@
+# yaml-language-server: $schema=./node_modules/envio/evm.schema.json
+name: onlycars
+networks:
+- id: 11155111
+  start_block: 0
+  contracts:
+  - name: OnlyCars
+    address:
+    - 0x475e213aC79b74eab24903BF5250027ead242D34
+    handler: src/EventHandlers.ts
+    events:
+    - event: Approval(address indexed owner, address indexed approved, uint256 indexed tokenId)
+    - event: ApprovalForAll(address indexed owner, address indexed operator, bool approved)
+    - event: BalanceTopUp(address indexed user, uint256 amount)
+    - event: StationRegistered(uint256 indexed stationId, address indexed owner, string metadata)
+    - event: StationReported(uint256 indexed stationId, address indexed reporter, string issue)
+    - event: StationUsed(uint256 indexed stationId, uint256 indexed vehicleId, uint256 amount)
+    - event: Transfer(address indexed from, address indexed to, uint256 indexed tokenId)
+    - event: VehicleRegistered(uint256 indexed vehicleId, address indexed owner)
+rollback_on_reorg: false

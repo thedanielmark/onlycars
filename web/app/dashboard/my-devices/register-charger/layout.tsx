@@ -6,7 +6,7 @@ interface LayoutProps {
 }
 
 export const metadata: Metadata = {
-  title: `Register New Vehicle | ${process.env.NEXT_PUBLIC_APP_NAME}`,
+  title: `Register New Charger | ${process.env.NEXT_PUBLIC_APP_NAME}`,
   description: "",
 };
 
