@@ -1,14 +1,22 @@
 var express = require("express");
 var router = express.Router();
-import { SignProtocolClient, SpMode, OffChainSignType } from "@ethsign/sp-sdk";
-import { privateKeyToAccount } from "viem/accounts";
-import "dotenv/config";
+const {
+  SignProtocolClient,
+  SpMode,
+  OffChainSignType,
+} = require("@ethsign/sp-sdk");
+const { privateKeyToAccount } = require("viem/accounts");
+require("dotenv/config");
 const db = require("../db");
 
 const privateKey = process.env.PRIVATE_KEY;
 
 router.post("/attest", async (req, res) => {
-  const { schemaId, data, indexingValue } = req.body;
+  let { schemaId, data, indexingValue } = req.body;
+
+  schemaId = `0x${schemaId}`;
+
+  console.log("Creating attestation with data:", schemaId);
 
   try {
     // Initialize SignProtocolClient for off-chain attestation
@@ -16,6 +24,10 @@ router.post("/attest", async (req, res) => {
       signType: OffChainSignType.EvmEip712,
       account: privateKeyToAccount(privateKey),
     });
+
+    // Get schema from the SignProtocol server
+    // const schema = await client.getSchema(schemaId);
+    // console.log("Schema:", schema);
 
     // Create attestation
     const attestationInfo = await client.createAttestation({

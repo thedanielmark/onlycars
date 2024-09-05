@@ -76,6 +76,8 @@ const DashboardLayout = ({ children }: LayoutProps) => {
             console.log("Response message:", data200.message);
             console.log("Address", address);
             fetchAddressStatus(address);
+            // Sign user into DIMO
+            signIntoDimo();
             break;
 
           case 201: // Created
@@ -83,6 +85,8 @@ const DashboardLayout = ({ children }: LayoutProps) => {
             setMessage(data201.message);
             console.log("User created message:", data201.message);
             fetchAddressStatus(address);
+            // Sign user into DIMO
+            signIntoDimo();
             break;
 
           case 400: // Bad Request
@@ -117,7 +121,7 @@ const DashboardLayout = ({ children }: LayoutProps) => {
       }
     };
 
-    if (user && address) {
+    if (user && address.length < 43) {
       sendUserData(userPayload);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -244,6 +248,23 @@ const DashboardLayout = ({ children }: LayoutProps) => {
     await subscribeResponse.json();
     setSubscriptionStatus(true);
     console.log("Subscription response:", subscribeResponse);
+  };
+
+  const signIntoDimo = async () => {
+    console.log("Signing into DIMO");
+    // POST request
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_DIMO_AUTH_URL}/auth/web3/generate_challenge?client_id=${process.env.NEXT_PUBLIC_DIMO_CLIENT_ID}&domain=${process.env.NEXT_PUBLIC_DIMO_REDIRECT_URI}&scope=openid+email&response_type=code&address=${address}`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ address }),
+      }
+    );
+    const data = await response.json();
+    console.log("Sign in response:", data);
   };
 
   return (

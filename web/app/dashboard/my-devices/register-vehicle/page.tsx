@@ -94,6 +94,24 @@ const slowConnectorsList = [
   },
 ];
 
+// Function to convert Base64 URL-safe to Hex
+function base64ToHex(base64: string): string {
+  // Replace URL-safe characters with standard Base64 characters
+  base64 = base64.replace(/-/g, "+").replace(/_/g, "/");
+
+  // Add padding if necessary
+  const pad = base64.length % 4;
+  if (pad) {
+    base64 += "=".repeat(4 - pad);
+  }
+
+  // Convert the Base64 string to a binary buffer
+  const binary = Buffer.from(base64, "base64");
+
+  // Convert the binary data to a hexadecimal string
+  return "0x" + binary.toString("hex");
+}
+
 function RegisterVehiclePage() {
   const [selectedChargersList, setSelectedChargersList] = useState(
     chargersList[0]
@@ -108,6 +126,7 @@ function RegisterVehiclePage() {
   );
   const [inputs, setInputs] = useState<any>({
     deviceDefinitionId: "",
+    name: "",
     make: "",
     model: "",
     year: "",
@@ -118,6 +137,9 @@ function RegisterVehiclePage() {
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [vehiclesList, setVehiclesList] = useState([]);
   const [filteredVehicleProfiles, setFilteredVehicleProfiles] = useState([]);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [message, setMessage] = useState<string>("");
+  const [showErrorMessage, setShowErrorMessage] = useState<boolean>(false);
 
   useEffect(() => {
     if (vehiclesList.length > 0) {
@@ -171,12 +193,96 @@ function RegisterVehiclePage() {
       // eslint-disable-next-line no-console
       console.log("Selected Vehicle Profile: ", vehicleProfile);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [vehicleProfile]);
+
+  // Updating inputs when the selected charger type or connector changes
+  useEffect(() => {
+    setInputs({
+      ...inputs,
+      chargerType: selectedChargersList.type,
+      connectorType:
+        selectedChargersList.id === 1
+          ? selectedRapidConnectorsList.type
+          : selectedChargersList.id === 2
+          ? selectedFastConnectorsList.type
+          : selectedSlowConnectorsList.type,
+    });
+    // eslint-disable-next-line no-console
+    console.log("Selected Charger: ", selectedChargersList);
+    // eslint-disable-next-line no-console
+    console.log("Selected Connector: ", selectedRapidConnectorsList);
+    // eslint-disable-next-line no-console
+    console.log("Selected Connector: ", selectedFastConnectorsList);
+    // eslint-disable-next-line no-console
+    console.log("Selected Connector: ", selectedSlowConnectorsList);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    selectedChargersList,
+    selectedRapidConnectorsList,
+    selectedFastConnectorsList,
+    selectedSlowConnectorsList,
+  ]);
+
+  const handleSubmit = async (event: any) => {
+    event.preventDefault();
+    setIsLoading(true);
+    setMessage("");
+    setShowErrorMessage(false);
+
+    const payload = JSON.stringify({
+      schemaId: process.env.NEXT_PUBLIC_SIGN_PROTOCOL_VEHICLE_SCHEMA_ID || "",
+      data: inputs,
+      indexingValue: "",
+    });
+
+    // eslint-disable-next-line no-console
+    console.log("Payload: ", payload);
+
+    // Post request
+    try {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_ROUTE}/attestations/attest`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: payload,
+        }
+      );
+
+      if (response.status === 200) {
+        // Write to chain
+        console.log(response);
+      }
+    } catch (error) {
+      setMessage("Error sending user data");
+      setShowErrorMessage(true);
+      console.error("Error sending user data:", error);
+    } finally {
+      setIsLoading(false);
+      setShowErrorMessage(false);
+    }
+  };
+
+  // Function to handle onChange of inputs
+  const handleInputChange = (
+    event:
+      | React.ChangeEvent<HTMLInputElement>
+      | React.ChangeEvent<HTMLTextAreaElement>
+  ) => {
+    event.persist();
+    setInputs((prev: any) => ({
+      ...prev,
+      [event.target.id]: event.target.value,
+    }));
+  };
 
   return (
     <>
       <div className="my-10 space-y-6 sm:px-6 lg:col-span-9 lg:px-0">
-        <form action="#" method="POST">
+        <form onSubmit={handleSubmit}>
           <div className="shadow sm:overflow-hidden sm:rounded-md">
             <div className="space-y-6 bg-zinc-900/70 border border-zinc-800 px-4 py-6 sm:p-6 overflow-hidden">
               <div>
@@ -203,6 +309,9 @@ function RegisterVehiclePage() {
                       id="name"
                       name="name"
                       type="text"
+                      required={true}
+                      value={inputs.name}
+                      onChange={handleInputChange}
                       placeholder="Danny's Lexus RX 350"
                       className="block w-full border-0 p-0 bg-transparent text-white placeholder:text-zinc-400 focus:ring-0 sm:text-sm sm:leading-6"
                     />
@@ -232,7 +341,8 @@ function RegisterVehiclePage() {
                         displayValue={(vehicle: { name?: string }) =>
                           vehicle?.name || ""
                         }
-                        placeholder="Nissan X-Trail 2024"
+                        placeholder="Tesla Model 3"
+                        required={true}
                       />
                       <ComboboxButton className="absolute inset-y-0 right-0 flex items-center rounded-r-md px-2 focus:outline-none">
                         <MagnifyingGlassIcon
@@ -291,18 +401,18 @@ function RegisterVehiclePage() {
                 <div className="col-span-3 sm:col-span-1">
                   <div className="rounded-md px-3 pb-1.5 pt-2.5 shadow-sm ring-1 ring-inset ring-zinc-800 focus-within:ring-2 focus-within:ring-sky-600">
                     <label
-                      htmlFor="name"
+                      htmlFor="make"
                       className="block text-xs font-medium text-zinc-200"
                     >
                       Vehicle Make
                     </label>
                     <input
-                      id="name"
-                      name="name"
+                      id="make"
+                      name="make"
                       type="text"
                       value={inputs.make || ""}
                       disabled={true}
-                      placeholder="Lexus"
+                      placeholder="Tesla"
                       className="block w-full border-0 p-0 bg-transparent text-white placeholder:text-zinc-400 focus:ring-0 sm:text-sm sm:leading-6 cursor-not-allowed"
                     />
                   </div>
@@ -312,18 +422,18 @@ function RegisterVehiclePage() {
                 <div className="col-span-3 sm:col-span-1">
                   <div className="rounded-md px-3 pb-1.5 pt-2.5 shadow-sm ring-1 ring-inset ring-zinc-800 focus-within:ring-2 focus-within:ring-sky-600">
                     <label
-                      htmlFor="name"
+                      htmlFor="model"
                       className="block text-xs font-medium text-zinc-200"
                     >
                       Vehicle Model
                     </label>
                     <input
-                      id="name"
-                      name="name"
+                      id="model"
+                      name="model"
                       type="text"
                       value={inputs.model || ""}
                       disabled={true}
-                      placeholder="RX 350"
+                      placeholder="Model 3"
                       className="block w-full border-0 p-0 bg-transparent text-white placeholder:text-zinc-400 focus:ring-0 sm:text-sm sm:leading-6 cursor-not-allowed"
                     />
                   </div>
@@ -333,14 +443,14 @@ function RegisterVehiclePage() {
                 <div className="col-span-3 sm:col-span-1">
                   <div className="rounded-md px-3 pb-1.5 pt-2.5 shadow-sm ring-1 ring-inset ring-zinc-800 focus-within:ring-2 focus-within:ring-sky-600">
                     <label
-                      htmlFor="name"
+                      htmlFor="year"
                       className="block text-xs font-medium text-zinc-200"
                     >
                       Model Year
                     </label>
                     <input
-                      id="name"
-                      name="name"
+                      id="year"
+                      name="year"
                       type="text"
                       value={inputs.year || ""}
                       disabled={true}

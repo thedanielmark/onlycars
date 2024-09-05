@@ -1,16 +1,18 @@
 /* eslint-disable jsx-a11y/alt-text */
 /* eslint-disable @next/next/no-img-element */
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Dialog,
   DialogBackdrop,
   DialogPanel,
   DialogTitle,
 } from "@headlessui/react";
-import { CheckIcon } from "@heroicons/react/24/outline";
 import { chargers } from "./chargers";
 import Link from "next/link";
+import { GraphQLClient } from "graphql-request";
+import vehicleConnectionsQuery from "@/utils/queries/vehicleConnections";
+import { useAuth } from "@/providers/AuthProvider";
 
 const vehicles = [
   {
@@ -46,8 +48,33 @@ const vehicles = [
 ];
 
 function MyDevicesPage() {
+  const { address } = useAuth();
+  const [vehicleConections, setVehicleConnections] = useState<any>([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedCharger, setSelectedCharger] = useState(chargers[0]);
+
+  useEffect(() => {
+    if (address) {
+      const fetchData = async () => {
+        try {
+          const client = new GraphQLClient(
+            process.env.NEXT_PUBLIC_DIMO_GRAPHQL_URL || ""
+          );
+          const query = vehicleConnectionsQuery(address);
+          const result = await client.request(query);
+          setVehicleConnections(result);
+        } catch (err: any) {
+          console.log(err.message);
+        }
+      };
+
+      fetchData();
+    }
+  }, [address]);
+
+  useEffect(() => {
+    console.log(vehicleConections);
+  }, [vehicleConections]);
 
   return (
     <>
