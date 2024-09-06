@@ -20,11 +20,13 @@ const mapboxgl = require("mapbox-gl/dist/mapbox-gl.js");
 const MapBox = ({
   location,
   chargers,
+  goToLocation,
   sendPopUpData,
   sendShowPopUp,
 }: {
   location: { latitude: number; longitude: number };
   chargers: Array<any>;
+  goToLocation: any;
   sendPopUpData: any;
   sendShowPopUp: any;
 }) => {
@@ -88,6 +90,14 @@ const MapBox = ({
   }, []);
 
   useEffect(() => {
+    if (pageIsMounted && goToLocation) {
+      console.log("goToLocation", goToLocation);
+      flyToLocation(goToLocation[0], goToLocation[1]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [goToLocation]);
+
+  useEffect(() => {
     if (pageIsMounted) {
       let map = new mapboxgl.Map({
         container: "my-map",
@@ -118,14 +128,17 @@ const MapBox = ({
     }
   }, [pageIsMounted]);
 
-  // function goToLocation() {
-  //   if (Map) {
-  //     Map.flyTo({
-  //       center: [location.longitude, location.latitude],
-  //       essential: true,
-  //     });
-  //   }
-  // }
+  function flyToLocation(longitude: number, latitude: number) {
+    if (Map) {
+      Map.flyTo({
+        center: [longitude, latitude],
+        zoom: 13, // Specify the zoom level
+        speed: 1.5, // Make the flying slow or fast
+        curve: 1, // Adjusts the 'smoothness' of the transition
+        essential: true,
+      });
+    }
+  }
 
   if (viewport[0] === 0 && viewport[1] === 0) {
     // Return null or a loading indicator while the viewport is being calculated

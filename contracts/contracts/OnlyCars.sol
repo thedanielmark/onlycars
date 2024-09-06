@@ -12,11 +12,14 @@ contract OnlyCars is ERC721 {
         address owner;
         string metadata;
         bool isActive;
+        bytes attestationUID;
     }
 
     struct Vehicle {
         uint256 id;
         address owner;
+        string metadata;
+        bytes attestationUID;
     }
 
     mapping(uint256 => Station) public stations;
@@ -45,7 +48,7 @@ contract OnlyCars is ERC721 {
 
     function registerStation(
         string memory metadata,
-        bytes memory signedUID
+        bytes memory attestationUID
     ) external {
         // TODO: Implement signature verification for signedUID
         uint256 newStationId = _nextStationId++;
@@ -54,16 +57,25 @@ contract OnlyCars is ERC721 {
             newStationId,
             msg.sender,
             metadata,
-            true
+            true,
+            attestationUID
         );
         emit StationRegistered(newStationId, msg.sender, metadata);
     }
 
-    function mintVehicle() external {
+    function mintVehicle(
+        string memory metadata,
+        bytes memory attestationUID
+    ) external {
         uint256 newVehicleId = _nextVehicleId++;
 
         _safeMint(msg.sender, newVehicleId);
-        vehicles[newVehicleId] = Vehicle(newVehicleId, msg.sender);
+        vehicles[newVehicleId] = Vehicle(
+            newVehicleId,
+            msg.sender,
+            metadata,
+            attestationUID
+        );
         emit VehicleRegistered(newVehicleId, msg.sender);
     }
 

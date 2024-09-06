@@ -9,12 +9,12 @@ const { privateKeyToAccount } = require("viem/accounts");
 require("dotenv/config");
 const db = require("../db");
 
-const privateKey = process.env.PRIVATE_KEY;
+const privateKey = `${process.env.PRIVATE_KEY}`;
 
 router.post("/attest", async (req, res) => {
-  let { schemaId, data, indexingValue } = req.body;
+  let { data, indexingValue } = req.body;
 
-  schemaId = `0x${schemaId}`;
+  schemaId = `SPA_IZSRVX9KtYX2DF7VT8QZb`;
 
   console.log("Creating attestation with data:", schemaId);
 
@@ -32,7 +32,15 @@ router.post("/attest", async (req, res) => {
     // Create attestation
     const attestationInfo = await client.createAttestation({
       schemaId,
-      data,
+      data: {
+        deviceDefinitionId: data.deviceDefinitionId, // "EV-2023-TESLA-M3-LR-01",
+        name: data.name, // "Tesla Model 3 Long Range",
+        make: data.make, // "Tesla",
+        model: data.model, // "Model 3",
+        year: data.year, // "2023",
+        chargerType: data.chargerType, // "Level 2",
+        connectorType: data.connectorType, // "J1772",
+      },
       indexingValue,
     });
 

@@ -395,7 +395,18 @@ export const contractABI = [
     type: "function",
   },
   {
-    inputs: [],
+    inputs: [
+      {
+        internalType: "string",
+        name: "metadata",
+        type: "string",
+      },
+      {
+        internalType: "bytes",
+        name: "attestationUID",
+        type: "bytes",
+      },
+    ],
     name: "mintVehicle",
     outputs: [],
     stateMutability: "nonpayable",
@@ -442,7 +453,7 @@ export const contractABI = [
       },
       {
         internalType: "bytes",
-        name: "signedUID",
+        name: "attestationUID",
         type: "bytes",
       },
     ],
@@ -567,6 +578,11 @@ export const contractABI = [
         internalType: "bool",
         name: "isActive",
         type: "bool",
+      },
+      {
+        internalType: "bytes",
+        name: "attestationUID",
+        type: "bytes",
       },
     ],
     stateMutability: "view",
@@ -695,6 +711,16 @@ export const contractABI = [
         internalType: "address",
         name: "owner",
         type: "address",
+      },
+      {
+        internalType: "string",
+        name: "metadata",
+        type: "string",
+      },
+      {
+        internalType: "bytes",
+        name: "attestationUID",
+        type: "bytes",
       },
     ],
     stateMutability: "view",

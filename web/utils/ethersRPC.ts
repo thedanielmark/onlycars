@@ -137,6 +137,27 @@ const readContract = async (provider: IProvider): Promise<any> => {
   }
 };
 
+const writeContract = async (provider: IProvider, args: any): Promise<any> => {
+  try {
+    const signer = await getSigner(provider);
+
+    const contractAddress = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS || "";
+    const contract = new ethers.Contract(
+      contractAddress,
+      JSON.parse(JSON.stringify(contractABI)),
+      signer
+    );
+    // Generate random number between 1000 and 9000
+
+    const tx = await contract.mintVehicle(args);
+    // Wait for transaction to finish
+    const receipt = await tx.wait();
+    return receipt;
+  } catch (error) {
+    return error as string;
+  }
+};
+
 export default {
   getChainId,
   getAccounts,
@@ -146,4 +167,5 @@ export default {
   signMessage,
   getPrivateKey,
   readContract,
+  writeContract,
 };

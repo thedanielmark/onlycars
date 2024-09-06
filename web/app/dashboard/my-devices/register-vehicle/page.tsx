@@ -14,7 +14,10 @@ import {
 } from "@headlessui/react";
 import { CheckCircleIcon } from "@heroicons/react/20/solid";
 import { CheckIcon, MagnifyingGlassIcon } from "@heroicons/react/24/outline";
-import { connect } from "http2";
+import axios from "axios";
+import { useAuth } from "@/providers/AuthProvider";
+import { ethers } from "ethers";
+import { contractABI } from "@/utils/contractABI";
 
 const chargersList = [
   {
@@ -113,6 +116,7 @@ function base64ToHex(base64: string): string {
 }
 
 function RegisterVehiclePage() {
+  const { address, getSigner } = useAuth();
   const [selectedChargersList, setSelectedChargersList] = useState(
     chargersList[0]
   );
@@ -140,6 +144,9 @@ function RegisterVehiclePage() {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [message, setMessage] = useState<string>("");
   const [showErrorMessage, setShowErrorMessage] = useState<boolean>(false);
+
+  const [metadataIPFSHash, setMetadataIPFSHash] = useState<string>("");
+  const [fileUploading, setFileUploading] = useState<boolean>(false);
 
   useEffect(() => {
     if (vehiclesList.length > 0) {
@@ -239,32 +246,108 @@ function RegisterVehiclePage() {
     // eslint-disable-next-line no-console
     console.log("Payload: ", payload);
 
-    // Post request
     try {
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_ROUTE}/attestations/attest`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
+      await axios
+        .post(
+          "https://api.pinata.cloud/pinning/pinJSONToIPFS",
+          {
+            pinataContent: inputs,
+            pinataMetadata: {
+              name: "OnlyCars Vehicle Metadata",
+            },
           },
-          body: payload,
-        }
-      );
+          {
+            headers: {
+              Authorization: `Bearer ${process.env.NEXT_PUBLIC_PINATA_JWT}`,
+              "Content-Type": "application/json",
+            },
+          }
+        )
+        .then(async (metadataResponse) => {
+          // Post request
+          try {
+            const attestationPayload = JSON.stringify({
+              data: {
+                deviceDefinitionId: inputs.deviceDefinitionId,
+                name: inputs.namd,
+                make: inputs.make,
+                model: inputs.model,
+                year: inputs.year,
+                chargerType: inputs.chargerType,
+                connectorType: inputs.connectorType,
+              },
+              indexingValue: address,
+            });
 
-      if (response.status === 200) {
-        // Write to chain
-        console.log(response);
-      }
-    } catch (error) {
+            const response = await fetch(
+              `${process.env.NEXT_PUBLIC_API_ROUTE}/attestations/attest`,
+              {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                body: attestationPayload,
+              }
+            );
+
+            if (response.status === 201) {
+              console.log(response);
+
+              setMetadataIPFSHash(metadataResponse.data.IpfsHash);
+              setFileUploading(false);
+            }
+          } catch (error) {
+            setMessage("Error sending user data");
+            setShowErrorMessage(true);
+            console.error("Error sending user data:", error);
+          } finally {
+            setIsLoading(false);
+            setShowErrorMessage(false);
+          }
+        })
+        .catch((err) => {
+          console.error("Error uploading metadata to IPFS: ", err);
+          setFileUploading(false);
+        });
+    } catch {
       setMessage("Error sending user data");
       setShowErrorMessage(true);
-      console.error("Error sending user data:", error);
+      console.error("Error sending user data");
     } finally {
       setIsLoading(false);
       setShowErrorMessage(false);
     }
   };
+
+  useEffect(() => {
+    const writeData = async () => {
+      // Write to contract
+      const signer = await getSigner();
+
+      const contractAddress = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS || "";
+      const contract = new ethers.Contract(
+        contractAddress,
+        JSON.parse(JSON.stringify(contractABI)),
+        signer
+      );
+
+      const tx = await contract.mintVehicle(
+        metadataIPFSHash,
+        "0xb860d1f279575747c7A7b18f8a2b396EdF648023"
+      );
+      console.log(tx);
+      // Wait for transaction to finish
+      const receipt = await tx.wait();
+      console.log(receipt);
+    };
+
+    if (metadataIPFSHash) {
+      writeData();
+      console.log("Called");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // TODO Change this to run only when attestation is created.
+  }, [metadataIPFSHash]);
 
   // Function to handle onChange of inputs
   const handleInputChange = (

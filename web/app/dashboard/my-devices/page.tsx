@@ -13,94 +13,188 @@ import Link from "next/link";
 import { GraphQLClient } from "graphql-request";
 import vehicleConnectionsQuery from "@/utils/queries/vehicleConnections";
 import { useAuth } from "@/providers/AuthProvider";
+import { contractABI } from "@/utils/contractABI";
+import { ethers } from "ethers";
+import vehiclesOwnedQuery from "@/utils/queries/vehiclesOwned";
 
-const vehicles = [
-  {
-    id: 1,
-    name: "Tesla Model 3",
-    make: "Tesla",
-    model: "Model 3",
-    year: 2021,
-    vin: "5YJ3E1EA8JF006588",
-    licensePlate: "ABC123",
-    status: "Active",
-  },
-  {
-    id: 2,
-    name: "Chevy Bolt",
-    make: "Chevy",
-    model: "Bolt",
-    year: 2021,
-    vin: "1G1FW6S03H4100001",
-    licensePlate: "DEF456",
-    status: "Active",
-  },
-  {
-    id: 3,
-    name: "Nissan Leaf",
-    make: "Nissan",
-    model: "Leaf",
-    year: 2021,
-    vin: "1N4AZ1CP6JC304871",
-    licensePlate: "GHI789",
-    status: "Active",
-  },
-];
+// const vehicles = [
+//   {
+//     id: 1,
+//     name: "Tesla Model 3",
+//     make: "Tesla",
+//     model: "Model 3",
+//     year: 2021,
+//     vin: "5YJ3E1EA8JF006588",
+//     licensePlate: "ABC123",
+//     status: "Active",
+//   },
+//   {
+//     id: 2,
+//     name: "Chevy Bolt",
+//     make: "Chevy",
+//     model: "Bolt",
+//     year: 2021,
+//     vin: "1G1FW6S03H4100001",
+//     licensePlate: "DEF456",
+//     status: "Active",
+//   },
+//   {
+//     id: 3,
+//     name: "Nissan Leaf",
+//     make: "Nissan",
+//     model: "Leaf",
+//     year: 2021,
+//     vin: "1N4AZ1CP6JC304871",
+//     licensePlate: "GHI789",
+//     status: "Active",
+//   },
+// ];
 
 function MyDevicesPage() {
-  const { address } = useAuth();
+  const { address, getSigner } = useAuth();
   const [vehicleConections, setVehicleConnections] = useState<any>([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedCharger, setSelectedCharger] = useState(chargers[0]);
+  const [metadataIPFSHash, setMetadataIPFSHash] = useState("");
+  const [vehicles, setVehicles] = useState<any>([]);
 
+  // Get vehicle connections for the user
   useEffect(() => {
-    if (address) {
-      const fetchData = async () => {
-        try {
-          const client = new GraphQLClient(
-            process.env.NEXT_PUBLIC_DIMO_GRAPHQL_URL || ""
-          );
-          const query = vehicleConnectionsQuery(address);
-          const result = await client.request(query);
-          setVehicleConnections(result);
-        } catch (err: any) {
-          console.log(err.message);
-        }
-      };
+    const fetchData = async () => {
+      try {
+        const client = new GraphQLClient(
+          process.env.NEXT_PUBLIC_DIMO_GRAPHQL_URL || ""
+        );
+        const query = vehicleConnectionsQuery(
+          process.env.NEXT_PUBLIC_DIMO_CLIENT_ID || ""
+        );
+        const result: any = await client.request(query);
+        setVehicleConnections(result.vehicles.nodes);
+      } catch (err: any) {
+        console.log(err.message);
+      }
+    };
 
-      fetchData();
-    }
-  }, [address]);
+    fetchData();
+  }, []);
 
   useEffect(() => {
     console.log(vehicleConections);
   }, [vehicleConections]);
+
+  // Get vehicle data for the user
+  useEffect(() => {
+    const fetchData = async (vehicle: any) => {
+      try {
+        const client = new GraphQLClient(
+          process.env.NEXT_PUBLIC_DIMO_GRAPHQL_URL || ""
+        );
+        const query = vehiclesOwnedQuery(vehicle.tokenId);
+        const result: any = await client.request(query);
+        console.log(result.vehicle);
+        // add vehicle to vehicles array
+        setVehicles((vehicles: any) => [...vehicles, result.vehicle as any]);
+      } catch (err: any) {
+        console.log(err.message);
+      }
+    };
+
+    if (vehicleConections.length > 0) {
+      vehicleConections.forEach((vehicle: any) => {
+        fetchData(vehicle);
+      });
+    }
+  }, [vehicleConections]);
+
+  useEffect(() => {
+    console.log(vehicleConections);
+  }, [vehicleConections]);
+
+  useEffect(() => {
+    const writeData = async () => {
+      // Write to contract
+      const signer = await getSigner();
+
+      const contractAddress = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS || "";
+      const contract = new ethers.Contract(
+        contractAddress,
+        JSON.parse(JSON.stringify(contractABI)),
+        signer
+      );
+
+      const tx = await contract.mintVehicle(
+        metadataIPFSHash,
+        "0xb860d1f279575747c7A7b18f8a2b396EdF648023"
+      );
+      console.log(tx);
+      // Wait for transaction to finish
+      const receipt = await tx.wait();
+      console.log(receipt);
+    };
+
+    if (metadataIPFSHash) {
+      writeData();
+      console.log("Called");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    const readData = async () => {
+      // Write to contract
+      const signer = await getSigner();
+
+      const contractAddress = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS || "";
+      const contract = new ethers.Contract(
+        contractAddress,
+        JSON.parse(JSON.stringify(contractABI)),
+        signer
+      );
+
+      // TODO - Read from contract
+      // const tx = await contract.mintVehicle(
+      //   metadataIPFSHash,
+      //   "0xb860d1f279575747c7A7b18f8a2b396EdF648023"
+      // );
+      // console.log(tx);
+      // // Wait for transaction to finish
+      // const receipt = await tx.wait();
+      // console.log(receipt);
+    };
+
+    if (address) {
+      readData();
+      console.log("Called");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [address]);
 
   return (
     <>
       <div className="mt-5">
         <div>
           <div className="text-2xl font-bold">Your registered vehicles</div>
-          <div className="grid grid-cols-3 gap-5">
-            {vehicles.map((vehicle) => (
+          <div className="mt-5 grid grid-cols-3 gap-5">
+            {vehicles.map((vehicle: any, index: number) => (
               <div
-                key={vehicle.id}
-                className="flex items-center justify-between mt-4 bg-zinc-900/70 border border-zinc-800 p-4 rounded-lg shadow-sm"
+                key={index}
+                className="flex items-center justify-between bg-zinc-900/70 border border-zinc-800 p-4 rounded-lg shadow-sm"
               >
                 <div className="flex items-center">
                   <div className="flex-shrink-0 h-12 w-12">
                     <img
                       className="h-12 w-12 rounded-full"
-                      src={`https://ui-avatars.com/api/?name=${vehicle.name}&background=random`}
+                      src={`https://ui-avatars.com/api/?name=${vehicle.definition.make}${vehicle.definition.model}&background=random`}
                       alt={vehicle.name}
                     />
                   </div>
                   <div className="ml-4">
                     <div className="text-sm font-semibold text-white">
-                      {vehicle.name}
+                      {vehicle.definition.make} {vehicle.definition.model}{" "}
+                      {vehicle.definition.year}
                     </div>
-                    <div className="text-sm text-zinc-500">
-                      {vehicle.make} {vehicle.model} {vehicle.year}
+                    <div className="text-sm text-zinc-400">
+                      {vehicle.definition.make}
                     </div>
                   </div>
                 </div>
@@ -112,16 +206,16 @@ function MyDevicesPage() {
                 </div>
               </div>
             ))}
-            <Link
-              href="/dashboard/my-devices/register-vehicle"
-              className="relative block w-full rounded-lg border-2 border-dashed border-zinc-800 p-12 text-center hover:border-zinc-900 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2"
-            >
-              <img src="/logo.png" className="h-12 w-12 mx-auto" />
-              <span className="mt-2 block text-sm font-semibold text-zinc-400">
-                Register a new vehicle
-              </span>
-            </Link>
           </div>
+          <Link
+            href="/dashboard/my-devices/register-vehicle"
+            className="mt-5 relative block w-full rounded-lg border-2 border-dashed border-zinc-800 p-12 text-center hover:border-zinc-900 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2"
+          >
+            <img src="/logo.png" className="h-12 w-12 mx-auto" />
+            <span className="mt-2 block text-sm font-semibold text-zinc-400">
+              Register a new vehicle
+            </span>
+          </Link>
         </div>
 
         <div className="my-12 border-b border-zinc-800" />

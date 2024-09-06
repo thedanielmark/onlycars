@@ -26,8 +26,10 @@ const InputField = () => {
             <Suggestion
               key={index}
               onClick={() => {
-                address.setValue(suggestion.place_name);
-                address.setSuggestions([]);
+                // address.setValue(suggestion.place_name);
+                // console.log(suggestion);
+                // address.setSuggestions([]);
+                // address.setGoToLocation(suggestion.place_name);
               }}
             >
               {suggestion.place_name}

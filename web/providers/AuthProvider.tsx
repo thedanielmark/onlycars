@@ -48,6 +48,7 @@ interface AuthContextProps {
   sendTransaction: () => Promise<void>;
   getPrivateKey: () => Promise<void> | any;
   readContract: () => Promise<void>;
+  writeContract: (data: any) => Promise<void> | any;
 }
 
 const AuthContext = createContext<AuthContextProps | undefined>(undefined);
@@ -194,19 +195,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     uiConsole(message);
   };
 
-  // const writeContract = async () => {
-  //   if (!provider) {
-  //     uiConsole("provider not initialized yet");
-  //     return;
-  //   }
-  //   const receipt = await RPC.writeContract();
-  //   uiConsole(receipt);
-  //   if (receipt) {
-  //     setTimeout(async () => {
-  //       await readContract();
-  //     }, 10000);
-  //   }
-  // };
+  const writeContract = async (data: any) => {
+    if (!provider) {
+      uiConsole("provider not initialized yet");
+      return;
+    }
+    const receipt = await RPC.writeContract(provider, data);
+    uiConsole(receipt);
+    if (receipt) {
+      setTimeout(async () => {
+        await readContract();
+      }, 10000);
+    }
+  };
 
   function uiConsole(...args: any[]): void {
     console.log(...args);
@@ -230,6 +231,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         sendTransaction,
         getPrivateKey,
         readContract,
+        writeContract,
       }}
     >
       {children}

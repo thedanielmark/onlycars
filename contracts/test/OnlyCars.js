@@ -25,9 +25,9 @@ describe("OnlyCars", function () {
     it("Should register a station", async function () {
       const { onlyCars, owner } = await loadFixture(deployOnlyCarsFixture);
       const metadata = "ipfs://station-metadata";
-      const signedUID = "0x"; // Placeholder for signature
+      const attestationUID = "0x5678"; // Placeholder for attestation UID
 
-      await expect(onlyCars.registerStation(metadata, signedUID))
+      await expect(onlyCars.registerStation(metadata, attestationUID))
         .to.emit(onlyCars, "StationRegistered")
         .withArgs(1, owner.address, metadata);
 
@@ -35,20 +35,25 @@ describe("OnlyCars", function () {
       expect(station.owner).to.equal(owner.address);
       expect(station.metadata).to.equal(metadata);
       expect(station.isActive).to.be.true;
+      expect(station.attestationUID).to.equal(attestationUID);
     });
   });
 
   describe("Vehicle Minting", function () {
     it("Should mint a vehicle", async function () {
       const { onlyCars, owner } = await loadFixture(deployOnlyCarsFixture);
+      const metadata = "ipfs://vehicle-metadata";
+      const attestationUID = "0x1234"; // Placeholder for attestation UID
 
-      await expect(onlyCars.mintVehicle())
+      await expect(onlyCars.mintVehicle(metadata, attestationUID))
         .to.emit(onlyCars, "VehicleRegistered")
         .withArgs(1, owner.address);
 
       expect(await onlyCars.ownerOf(1)).to.equal(owner.address);
       const vehicle = await onlyCars.vehicles(1);
       expect(vehicle.owner).to.equal(owner.address);
+      expect(vehicle.metadata).to.equal(metadata);
+      expect(vehicle.attestationUID).to.equal(attestationUID);
     });
   });
 
@@ -71,16 +76,18 @@ describe("OnlyCars", function () {
         deployOnlyCarsFixture
       );
       const stationMetadata = "ipfs://station-metadata";
-      const signedUID = "0x"; // Placeholder for signature
+      const attestationUID = "0x5678"; // Placeholder for attestation UID
       const useAmount = ethers.parseEther("0.5");
 
       // Register station
       await onlyCars
         .connect(otherAccount)
-        .registerStation(stationMetadata, signedUID);
+        .registerStation(stationMetadata, attestationUID);
 
       // Mint vehicle
-      await onlyCars.mintVehicle();
+      const vehicleMetadata = "ipfs://vehicle-metadata";
+      const vehicleAttestationUID = "0x1234";
+      await onlyCars.mintVehicle(vehicleMetadata, vehicleAttestationUID);
 
       // Top up balance
       await onlyCars.topUp({ value: ethers.parseEther("1") });

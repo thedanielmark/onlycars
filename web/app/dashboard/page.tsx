@@ -22,6 +22,12 @@ interface AddressComponent {
 interface ReverseGeocodeResponse {
   results: {
     address_components: AddressComponent[];
+    geometry: {
+      location: {
+        lat: number;
+        lng: number;
+      };
+    };
   }[];
 }
 
@@ -46,6 +52,8 @@ const reverseGeocode = async (
 
   const data: ReverseGeocodeResponse = await response.json();
   const addressComponents = data.results[0].address_components;
+
+  // console.log(data.results[0].geometry.location);
 
   const countryComponent = addressComponents.find((component) =>
     component.types.includes("country")
@@ -98,6 +106,9 @@ function DashboardPage() {
   const [address, setAddress] = useState<string | null>(null);
   const [showPopUp, setShowPopUp] = useState(false);
   const [PopUpData, setPopUpData] = useState<any>();
+  const [goToLocation, setGoToLocation] = useState<[number, number] | null>(
+    null
+  );
   const customInput = useInput("");
 
   function handlePopUpData(data: any) {
@@ -179,6 +190,8 @@ function DashboardPage() {
                   customInput.setValue(suggestion.place_name);
                   // Assume `setCenter` is defined elsewhere
                   // setCenter(suggestion.center);
+                  setGoToLocation(suggestion.center);
+                  console.log(suggestion.center);
                   customInput.setSuggestions([]);
                   setAddress(suggestion.place_name);
                   // setLocation(suggestion.place_name);
@@ -309,6 +322,7 @@ function DashboardPage() {
         <MapBox
           location={location}
           chargers={chargers}
+          goToLocation={goToLocation}
           sendPopUpData={handlePopUpData}
           sendShowPopUp={handleShowPopUp}
         />
