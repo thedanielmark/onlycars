@@ -789,13 +789,21 @@ function RegisterVehiclePage() {
                 <p className="text-sm text-white">
                   Your vehicle was successfully registered.
                 </p>
-                <p className="mt-3 text-sm md:ml-6 md:mt-0">
+                <p className="mt-3 flex items-center gap-x-3 text-sm md:ml-6 md:mt-0">
                   <a
-                    href={`https://sepolia.etherscan.io/tx/${transactionHash}`}
-                    className="whitespace-nowrap font-medium text-sky-500 hover:text-sky-600"
+                    href={`https://scan.sign.global/attestation/${attestationID}`}
+                    className="whitespace-nowrap font-medium text-sky-500 hover:text-sky-200"
                     target="_blank"
                   >
-                    Details
+                    View Attestation
+                    <span aria-hidden="true"> &rarr;</span>
+                  </a>
+                  <a
+                    href={`https://sepolia.etherscan.io/tx/${transactionHash}`}
+                    className="whitespace-nowrap font-medium text-sky-500 hover:text-sky-200"
+                    target="_blank"
+                  >
+                    View Transaction
                     <span aria-hidden="true"> &rarr;</span>
                   </a>
                 </p>
