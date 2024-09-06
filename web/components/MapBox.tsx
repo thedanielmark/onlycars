@@ -128,6 +128,25 @@ const MapBox = ({
     }
   }, [pageIsMounted]);
 
+  useEffect(() => {
+    console.log("I got the new chargers");
+    chargers.forEach((charger) => {
+      let marker = new mapboxgl.Marker() // Create a new marker
+        .setLngLat([
+          charger.AddressInfo.Longitude,
+          charger.AddressInfo.Latitude,
+        ])
+        .addTo(Map);
+
+      marker.getElement().addEventListener("click", () => {
+        sendPopUpData(charger);
+        sendShowPopUp();
+        console.log("clicked in marker");
+      });
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chargers]);
+
   function flyToLocation(longitude: number, latitude: number) {
     if (Map) {
       Map.flyTo({

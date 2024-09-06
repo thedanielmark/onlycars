@@ -168,6 +168,47 @@ function DashboardPage() {
     }
   }, []);
 
+  // useEffect to trigger reverse geocoding when the goToLocation changes
+  useEffect(() => {
+    console.log("I'm triggered");
+    const triggerMe = async () => {
+      console.log("I'm inside the async function");
+      if (goToLocation) {
+        // const [latitude, longitude] = goToLocation;
+        try {
+          const countryCode = await reverseGeocode(
+            goToLocation[1],
+            goToLocation[0]
+          );
+          setCountryCode(countryCode);
+
+          const chargers = countryCode
+            ? await fetchChargersByCountry(countryCode)
+            : [];
+
+          const sortedChargers = chargers
+            .map((charger) => ({
+              ...charger,
+              distance: getDistanceFromLatLonInKm(
+                goToLocation[1],
+                goToLocation[0],
+                charger.AddressInfo.Latitude,
+                charger.AddressInfo.Longitude
+              ),
+            }))
+            .sort((a, b) => a.distance - b.distance);
+
+          setChargers(sortedChargers);
+          console.log("Set new chargers");
+        } catch (err) {
+          setError(err instanceof Error ? err.message : "An error occurred");
+        }
+      }
+    };
+
+    triggerMe();
+  }, [goToLocation]);
+
   return (
     <div
       className="relative w-full h-full"
@@ -245,7 +286,9 @@ function DashboardPage() {
               <div className="gap-y-1">
                 {/* Print out all the connections here */}
                 {PopUpData?.Connections.map((connection: any) => (
-                  <span key={connection.ID}>{connection.Level.Title}</span>
+                  <span key={connection.ID}>
+                    {connection.Level && connection.Level.Title}
+                  </span>
                 ))}
               </div>
             </div>
