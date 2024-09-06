@@ -23,6 +23,8 @@ type OnlyCars_StationRegistered {
   stationId: BigInt!
   owner: String!
   metadata: String!
+  isActive: Boolean!
+  attestationId: String!
 }
 
 type OnlyCars_StationReported {
@@ -50,5 +52,6 @@ type OnlyCars_VehicleRegistered {
   id: ID!
   vehicleId: BigInt!
   owner: String!
+  metadata: String!
+  attestationId: String!
 }
-

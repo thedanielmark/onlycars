@@ -29,9 +29,16 @@ contract OnlyCars is ERC721 {
     event StationRegistered(
         uint256 indexed stationId,
         address indexed owner,
-        string metadata
+        string metadata,
+        bool isActive,
+        bytes attestationUID
     );
-    event VehicleRegistered(uint256 indexed vehicleId, address indexed owner);
+    event VehicleRegistered(
+        uint256 indexed vehicleId,
+        address indexed owner,
+        string metadata,
+        bytes attestationUID
+    );
     event BalanceTopUp(address indexed user, uint256 amount);
     event StationUsed(
         uint256 indexed stationId,
@@ -60,7 +67,13 @@ contract OnlyCars is ERC721 {
             true,
             attestationUID
         );
-        emit StationRegistered(newStationId, msg.sender, metadata);
+        emit StationRegistered(
+            newStationId,
+            msg.sender,
+            metadata,
+            true,
+            attestationUID
+        );
     }
 
     function mintVehicle(
@@ -76,7 +89,12 @@ contract OnlyCars is ERC721 {
             metadata,
             attestationUID
         );
-        emit VehicleRegistered(newVehicleId, msg.sender);
+        emit VehicleRegistered(
+            newVehicleId,
+            msg.sender,
+            metadata,
+            attestationUID
+        );
     }
 
     function topUp() external payable {

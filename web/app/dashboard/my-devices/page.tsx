@@ -16,6 +16,7 @@ import { useAuth } from "@/providers/AuthProvider";
 import { contractABI } from "@/utils/contractABI";
 import { ethers } from "ethers";
 import vehiclesOwnedQuery from "@/utils/queries/vehiclesOwned";
+import testEnvio from "@/utils/queries/testEnvio";
 
 // const vehicles = [
 //   {
@@ -137,7 +138,7 @@ function MyDevicesPage() {
       console.log("Called");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [metadataIPFSHash]);
 
   useEffect(() => {
     const readData = async () => {
@@ -168,6 +169,21 @@ function MyDevicesPage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [address]);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const client = new GraphQLClient("http://localhost:8080/v1/graphql");
+        const query = testEnvio();
+        const result: any = await client.request(query);
+        console.log(result);
+      } catch (err: any) {
+        console.log(err.message);
+      }
+    };
+
+    fetchData();
+  }, []);
 
   return (
     <>

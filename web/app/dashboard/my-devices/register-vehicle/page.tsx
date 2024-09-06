@@ -13,11 +13,16 @@ import {
   RadioGroup,
 } from "@headlessui/react";
 import { CheckCircleIcon } from "@heroicons/react/20/solid";
-import { CheckIcon, MagnifyingGlassIcon } from "@heroicons/react/24/outline";
+import {
+  CheckIcon,
+  InformationCircleIcon,
+  MagnifyingGlassIcon,
+} from "@heroicons/react/24/outline";
 import axios from "axios";
 import { useAuth } from "@/providers/AuthProvider";
-import { ethers } from "ethers";
+import { ethers, toUtf8Bytes } from "ethers";
 import { contractABI } from "@/utils/contractABI";
+import { RotatingLines } from "react-loader-spinner";
 
 const chargersList = [
   {
@@ -147,6 +152,13 @@ function RegisterVehiclePage() {
 
   const [metadataIPFSHash, setMetadataIPFSHash] = useState<string>("");
   const [fileUploading, setFileUploading] = useState<boolean>(false);
+  const [attestationID, setAttestationID] = useState<string>("");
+
+  const [showSuccess, setShowSuccess] = useState<boolean>(false);
+  const [showError, setShowError] = useState<boolean>(false);
+  const [error, setError] = useState<string>("");
+  const [transactionHash, setTransactionHash] = useState<string>("");
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
   useEffect(() => {
     if (vehiclesList.length > 0) {
@@ -264,12 +276,11 @@ function RegisterVehiclePage() {
           }
         )
         .then(async (metadataResponse) => {
-          // Post request
           try {
             const attestationPayload = JSON.stringify({
               data: {
                 deviceDefinitionId: inputs.deviceDefinitionId,
-                name: inputs.namd,
+                name: inputs.name,
                 make: inputs.make,
                 model: inputs.model,
                 year: inputs.year,
@@ -279,7 +290,7 @@ function RegisterVehiclePage() {
               indexingValue: address,
             });
 
-            const response = await fetch(
+            const response: any = await fetch(
               `${process.env.NEXT_PUBLIC_API_ROUTE}/attestations/attest`,
               {
                 method: "POST",
@@ -291,8 +302,9 @@ function RegisterVehiclePage() {
             );
 
             if (response.status === 201) {
-              console.log(response);
-
+              const responseJSON = await response.json();
+              console.log(responseJSON);
+              setAttestationID(responseJSON.attestation.attestationId);
               setMetadataIPFSHash(metadataResponse.data.IpfsHash);
               setFileUploading(false);
             }
@@ -301,7 +313,6 @@ function RegisterVehiclePage() {
             setShowErrorMessage(true);
             console.error("Error sending user data:", error);
           } finally {
-            setIsLoading(false);
             setShowErrorMessage(false);
           }
         })
@@ -314,7 +325,6 @@ function RegisterVehiclePage() {
       setShowErrorMessage(true);
       console.error("Error sending user data");
     } finally {
-      setIsLoading(false);
       setShowErrorMessage(false);
     }
   };
@@ -333,21 +343,24 @@ function RegisterVehiclePage() {
 
       const tx = await contract.mintVehicle(
         metadataIPFSHash,
-        "0xb860d1f279575747c7A7b18f8a2b396EdF648023"
+        toUtf8Bytes(attestationID)
       );
       console.log(tx);
       // Wait for transaction to finish
       const receipt = await tx.wait();
-      console.log(receipt);
+      if (receipt.status === 1) {
+        setShowSuccess(true);
+        setTransactionHash(receipt.hash);
+        setIsLoading(false);
+      }
     };
 
-    if (metadataIPFSHash) {
+    if (metadataIPFSHash && attestationID) {
       writeData();
       console.log("Called");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    // TODO Change this to run only when attestation is created.
-  }, [metadataIPFSHash]);
+  }, [metadataIPFSHash, attestationID]);
 
   // Function to handle onChange of inputs
   const handleInputChange = (
@@ -734,16 +747,62 @@ function RegisterVehiclePage() {
                 {/* Slow Connectors end */}
               </div>
             </div>
-            <div className="bg-zinc-800/70 px-4 py-3 text-right sm:px-6 border border-zinc-800">
+            <div className="flex justify-end bg-zinc-800/70 px-4 py-3 text-right sm:px-6 border border-zinc-800">
               <button
                 type="submit"
-                className="inline-flex justify-center rounded-md bg-sky-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-sky-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-600"
+                className={`flex items-center justify-center gap-x-3 rounded-md bg-sky-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-sky-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-600 ${
+                  isLoading
+                    ? "cursor-not-allowed opacity-50"
+                    : "cursor-pointer opacity-100"
+                }`}
               >
-                Register Vehicle
+                {isLoading ? (
+                  <>
+                    <RotatingLines
+                      visible={true}
+                      width="20"
+                      strokeColor="#ffffff"
+                      strokeWidth="5"
+                      animationDuration="0.75"
+                      ariaLabel="rotating-lines-loading"
+                    />{" "}
+                    Registering Vehicle
+                  </>
+                ) : (
+                  "Register Vehicle"
+                )}
               </button>
             </div>
           </div>
         </form>
+
+        {showSuccess && (
+          <div className="rounded-md bg-sky-900 p-4">
+            <div className="flex">
+              <div className="flex-shrink-0">
+                <InformationCircleIcon
+                  aria-hidden="true"
+                  className="h-5 w-5 text-sky-400"
+                />
+              </div>
+              <div className="ml-3 flex-1 md:flex md:justify-between">
+                <p className="text-sm text-white">
+                  Your vehicle was successfully registered.
+                </p>
+                <p className="mt-3 text-sm md:ml-6 md:mt-0">
+                  <a
+                    href={`https://sepolia.etherscan.io/tx/${transactionHash}`}
+                    className="whitespace-nowrap font-medium text-sky-500 hover:text-sky-600"
+                    target="_blank"
+                  >
+                    Details
+                    <span aria-hidden="true"> &rarr;</span>
+                  </a>
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </>
   );

@@ -6,15 +6,15 @@ networks:
     contracts:
       - name: OnlyCars
         address:
-          - 0x1025bB8f5cA9a44d5bc5849500f00b372a83DDf1
+          - 0x7e8A5199b86806D07Ef7763629F05c85Fc5a55Df
         handler: src/EventHandlers.ts
         events:
           - event: Approval(address indexed owner, address indexed approved, uint256 indexed tokenId)
           - event: ApprovalForAll(address indexed owner, address indexed operator, bool approved)
           - event: BalanceTopUp(address indexed user, uint256 amount)
-          - event: StationRegistered(uint256 indexed stationId, address indexed owner, string metadata)
+          - event: StationRegistered(uint256 indexed stationId, address indexed owner, string metadata, bool isActive, bytes attestationUID)
           - event: StationReported(uint256 indexed stationId, address indexed reporter, string issue)
           - event: StationUsed(uint256 indexed stationId, uint256 indexed vehicleId, uint256 amount)
           - event: Transfer(address indexed from, address indexed to, uint256 indexed tokenId)
-          - event: VehicleRegistered(uint256 indexed vehicleId, address indexed owner)
+          - event: VehicleRegistered(uint256 indexed vehicleId, address indexed owner, string metadata, bytes attestationUID);
 rollback_on_reorg: false

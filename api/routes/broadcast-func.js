@@ -1,9 +1,9 @@
-import { ethers } from "ethers";
-import { Client } from "@xmtp/xmtp-js";
-import "dotenv/config";
+const { ethers } = require("ethers");
+const { Client } = require("@xmtp/xmtp-js");
+require("dotenv/config");
 
 // Function to send a broadcast message to a list of recipients
-export async function sendBroadcastMessage(recipients, message) {
+async function sendBroadcastMessage(recipients, message) {
   // In a real application, use the user's wallet
   const signer = new ethers.Wallet(process.env.PRIVATE_KEY || "");
   const xmtp = await Client.create(signer, {
@@ -26,6 +26,6 @@ export async function sendBroadcastMessage(recipients, message) {
 }
 
 // Example usage
-const recipients = ["0x245c7e7038cc9Fc3b76fce773d24ff70C72753a8"];
-const message = "Private key test!"; // Your broadcast message
-sendBroadcastMessage(recipients, message);
+// const recipients = [recipients];
+// const message = "Private key test!"; // Your broadcast message
+// sendBroadcastMessage(recipients, message);

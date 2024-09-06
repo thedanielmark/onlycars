@@ -9,12 +9,12 @@ const { privateKeyToAccount } = require("viem/accounts");
 require("dotenv/config");
 const db = require("../db");
 
-const privateKey = `${process.env.PRIVATE_KEY}`;
+const privateKey = `0x${process.env.PRIVATE_KEY}`;
 
 router.post("/attest", async (req, res) => {
   let { data, indexingValue } = req.body;
 
-  schemaId = `SPA_IZSRVX9KtYX2DF7VT8QZb`;
+  schemaId = `SPS_WZ-U7wZdMJyBJnWJsWJ0s`;
 
   console.log("Creating attestation with data:", schemaId);
 
