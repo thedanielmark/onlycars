@@ -40,7 +40,6 @@ const getBalance = async (provider: IProvider): Promise<string> => {
     const balance = ethers.formatEther(
       await ethersProvider.getBalance(address) // Balance is in wei
     );
-
     return balance;
   } catch (error) {
     return error as string;

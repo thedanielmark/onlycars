@@ -42,7 +42,7 @@ interface AuthContextProps {
   logout: () => Promise<void>;
   getUserInfo: () => Promise<void>;
   getAccounts: () => Promise<void>;
-  getBalance: () => Promise<void>;
+  getBalance: () => Promise<void> | any;
   getSigner: () => Promise<void> | any;
   signMessage: (message: any) => Promise<void | any>;
   sendTransaction: () => Promise<void>;
@@ -135,7 +135,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       return;
     }
     const balance = await RPC.getBalance(provider);
-    uiConsole(balance);
+    return balance;
   };
 
   const getSigner = async () => {

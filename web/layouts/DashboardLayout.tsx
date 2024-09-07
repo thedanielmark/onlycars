@@ -2,6 +2,10 @@
 "use client";
 
 import {
+  Dialog,
+  DialogBackdrop,
+  DialogPanel,
+  DialogTitle,
   Disclosure,
   DisclosureButton,
   // DisclosurePanel,
@@ -10,7 +14,12 @@ import {
   MenuItem,
   MenuItems,
 } from "@headlessui/react";
-import { Bars3Icon, BellIcon, XMarkIcon } from "@heroicons/react/24/outline";
+import {
+  Bars3Icon,
+  BellIcon,
+  WalletIcon,
+  XMarkIcon,
+} from "@heroicons/react/24/outline";
 import { ReactNode, useEffect, useState } from "react";
 import { useAuth } from "@/providers/AuthProvider";
 import Link from "next/link";
@@ -45,12 +54,28 @@ interface LayoutProps {
 
 const DashboardLayout = ({ children }: LayoutProps) => {
   const pathname = usePathname();
-  const { loggedIn, logout, user, address, signMessage, provider } = useAuth();
-  // const { client, error, isLoading: isXMTPLoading, initialize } = useClient();
+  const { loggedIn, logout, user, address, getBalance, signMessage, provider } =
+    useAuth();
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [message, setMessage] = useState<string | null>(null);
   const [wallet, setWallet] = useState<any | null>(null);
   const [subscriptionStatus, setSubscriptionStatus] = useState<boolean>(false);
+  const [walletModalOpen, setWalletModalOpen] = useState<boolean>(false);
+  const [balance, setBalance] = useState<number | null>(null);
+
+  useEffect(() => {
+    const getTheBalance = async () => {
+      const balance = await getBalance();
+      console.log("Balance:", balance);
+      setBalance(balance);
+    };
+
+    if (loggedIn) {
+      getTheBalance();
+    }
+
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loggedIn]);
 
   useEffect(() => {
     const userPayload: IUserPayload = user;
@@ -267,6 +292,9 @@ const DashboardLayout = ({ children }: LayoutProps) => {
     console.log("Sign in response:", data);
   };
 
+  // Handle Top up wallet
+  const handleTopUpWallet = async () => {};
+
   return (
     <>
       {isLoading ? (
@@ -323,9 +351,17 @@ const DashboardLayout = ({ children }: LayoutProps) => {
                   </div>
                 </div>
                 <div className="hidden sm:ml-6 sm:flex sm:items-center">
+                  <button
+                    onClick={() => setWalletModalOpen(true)}
+                    className="relative rounded-full bg-zinc-900/70 p-2 text-zinc-400 hover:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2"
+                  >
+                    <span className="absolute -inset-1.5" />
+                    <span className="sr-only">Wallet</span>
+                    <WalletIcon aria-hidden="true" className="h-6 w-6" />
+                  </button>
                   <Link
                     href="/dashboard/notifications"
-                    className="relative rounded-full bg-zinc-900/70 p-1 text-zinc-400 hover:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2"
+                    className="ml-2 relative rounded-full bg-zinc-900/70 p-2 text-zinc-400 hover:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2"
                   >
                     <span className="absolute -inset-1.5" />
                     <span className="sr-only">View notifications</span>
@@ -371,6 +407,16 @@ const DashboardLayout = ({ children }: LayoutProps) => {
                       </MenuItem>
                     </MenuItems>
                   </Menu>
+                  {loggedIn && (
+                    <div className="ml-3">
+                      <p className="text-sm font-medium text-gray-700 group-hover:text-gray-900">
+                        {user.name}
+                      </p>
+                      <p className="text-xs font-medium text-gray-500 group-hover:text-gray-700">
+                        {user.email}
+                      </p>
+                    </div>
+                  )}
                 </div>
                 <div className="-mr-2 flex items-center sm:hidden">
                   {/* Mobile menu button */}
@@ -471,6 +517,64 @@ const DashboardLayout = ({ children }: LayoutProps) => {
           </div>
         </div>
       )}
+
+      {/* Modal with charger info start */}
+      <Dialog
+        open={walletModalOpen}
+        onClose={setWalletModalOpen}
+        className="relative z-50"
+      >
+        <DialogBackdrop
+          transition
+          className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity data-[closed]:opacity-0 data-[enter]:duration-300 data-[leave]:duration-200 data-[enter]:ease-out data-[leave]:ease-in"
+        />
+
+        <div className="fixed inset-0 z-10 w-screen overflow-y-auto">
+          <div className="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
+            <DialogPanel
+              transition
+              className="relative transform overflow-hidden rounded-lg bg-black px-4 pb-4 pt-5 text-left shadow-xl transition-all data-[closed]:translate-y-4 data-[closed]:opacity-0 data-[enter]:duration-300 data-[leave]:duration-200 data-[enter]:ease-out data-[leave]:ease-in sm:my-8 sm:w-full sm:max-w-sm sm:p-6 data-[closed]:sm:translate-y-0 data-[closed]:sm:scale-95"
+            >
+              <div>
+                <div>
+                  <DialogTitle className="text-lg font-semibold text-white">
+                    Your Wallet
+                  </DialogTitle>
+                  <div className="text-sm text-zinc-400"></div>
+
+                  <div className="mt-5 flex items-center gap-x-2">
+                    <div>
+                      <img
+                        src="https://cryptologos.cc/logos/ethereum-eth-logo.png"
+                        alt="Eth"
+                        className="h-6 w-6 mx-auto"
+                      />
+                    </div>
+                    <div>{balance && balance} ETH</div>
+                  </div>
+                </div>
+              </div>
+              <div className="mt-5 sm:mt-6">
+                <button
+                  type="button"
+                  onClick={handleTopUpWallet}
+                  className="inline-flex w-full justify-center rounded-md bg-sky-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-sky-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-600"
+                >
+                  Top Up Wallet
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setWalletModalOpen(false)}
+                  className="mt-2 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold border border-zinc-200 text-zinc-900 shadow-sm hover:bg-sky-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-600"
+                >
+                  Close
+                </button>
+              </div>
+            </DialogPanel>
+          </div>
+        </div>
+      </Dialog>
+      {/* Modal with charger info end */}
     </>
   );
 };
