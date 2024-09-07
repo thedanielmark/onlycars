@@ -313,7 +313,7 @@ const DashboardLayout = ({ children }: LayoutProps) => {
         signer
       );
 
-      const topUpAmount = parseEther("1.0"); // Top up with 1 Ether, adjust as needed
+      const topUpAmount = parseEther("0.0005"); // Top up with 0.0005 Ether, adjust as needed
 
       const tx = await contract.topUp({ value: topUpAmount });
       console.log(tx);
@@ -394,14 +394,6 @@ const DashboardLayout = ({ children }: LayoutProps) => {
                     <span className="sr-only">Wallet</span>
                     <WalletIcon aria-hidden="true" className="h-6 w-6" />
                   </button>
-                  <Link
-                    href="/dashboard/notifications"
-                    className="ml-2 relative rounded-full bg-zinc-900/70 p-2 text-zinc-400 hover:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2"
-                  >
-                    <span className="absolute -inset-1.5" />
-                    <span className="sr-only">View notifications</span>
-                    <BellIcon aria-hidden="true" className="h-6 w-6" />
-                  </Link>
 
                   {/* Profile dropdown */}
                   <Menu as="div" className="relative ml-3">
