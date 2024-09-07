@@ -26,11 +26,12 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { IUserPayload } from "@/utils/types/IUserData";
 import { RotatingLines } from "react-loader-spinner";
-import { ethers, JsonRpcSigner } from "ethers";
+import { ethers, JsonRpcSigner, parseEther } from "ethers";
 import {
   createConsentMessage,
   createConsentProofPayload,
 } from "@xmtp/consent-proof-signature";
+import { contractABI } from "@/utils/contractABI";
 
 const navigation = [
   { name: "Navigate", href: "/dashboard" },
@@ -54,8 +55,16 @@ interface LayoutProps {
 
 const DashboardLayout = ({ children }: LayoutProps) => {
   const pathname = usePathname();
-  const { loggedIn, logout, user, address, getBalance, signMessage, provider } =
-    useAuth();
+  const {
+    loggedIn,
+    logout,
+    user,
+    address,
+    getBalance,
+    signMessage,
+    provider,
+    getSigner,
+  } = useAuth();
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [message, setMessage] = useState<string | null>(null);
   const [wallet, setWallet] = useState<any | null>(null);
@@ -293,7 +302,33 @@ const DashboardLayout = ({ children }: LayoutProps) => {
   };
 
   // Handle Top up wallet
-  const handleTopUpWallet = async () => {};
+  const handleTopUpWallet = async () => {
+    try {
+      const signer = await getSigner();
+
+      const contractAddress = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS || "";
+      const contract = new ethers.Contract(
+        contractAddress,
+        JSON.parse(JSON.stringify(contractABI)),
+        signer
+      );
+
+      const topUpAmount = parseEther("1.0"); // Top up with 1 Ether, adjust as needed
+
+      const tx = await contract.topUp({ value: topUpAmount });
+      console.log(tx);
+
+      // Wait for transaction to finish
+      const receipt = await tx.wait();
+      if (receipt.status === "success") {
+        console.log("Top up successful");
+      } else {
+        console.log("Top up failed");
+      }
+    } catch (error) {
+      console.error("Error during top up:", error);
+    }
+  };
 
   return (
     <>
