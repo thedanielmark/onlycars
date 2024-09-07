@@ -8,7 +8,7 @@ import {
   DialogPanel,
   DialogTitle,
 } from "@headlessui/react";
-import { chargers } from "./chargers";
+// import { chargers } from "./chargers";
 import Link from "next/link";
 import { GraphQLClient } from "graphql-request";
 import vehicleConnectionsQuery from "@/utils/queries/vehicleConnections";
@@ -16,7 +16,9 @@ import { useAuth } from "@/providers/AuthProvider";
 import { contractABI } from "@/utils/contractABI";
 import { ethers } from "ethers";
 import vehiclesOwnedQuery from "@/utils/queries/vehiclesOwned";
-import testEnvio from "@/utils/queries/testEnvio";
+import vehiclesMinted from "@/utils/queries/vehiclesMinted";
+import { pinata } from "@/utils/pinata";
+import stationsOwned from "@/utils/queries/stationsOwned";
 
 // const vehicles = [
 //   {
@@ -51,15 +53,47 @@ import testEnvio from "@/utils/queries/testEnvio";
 //   },
 // ];
 
+interface IVehicle {
+  chargerType: string;
+  connectorType: string;
+  make: string;
+  model: string;
+  year: number;
+  source: string;
+}
+
+interface ICharger {
+  name: string;
+  address: string;
+  latitude: number;
+  longitude: number;
+  chargers: any;
+  rapidChargerConnectors: any;
+  fastChargerConnectors: any;
+  slowChargerConnectors: any;
+}
+
 function MyDevicesPage() {
   const { address, getSigner } = useAuth();
   const [vehicleConections, setVehicleConnections] = useState<any>([]);
   const [modalOpen, setModalOpen] = useState(false);
-  const [selectedCharger, setSelectedCharger] = useState(chargers[0]);
-  const [metadataIPFSHash, setMetadataIPFSHash] = useState("");
-  const [vehicles, setVehicles] = useState<any>([]);
 
-  // Get vehicle connections for the user
+  const [metadataIPFSHash, setMetadataIPFSHash] = useState("");
+  const [vehicles, setVehicles] = useState<IVehicle[]>([]);
+
+  const [chargers, setChargers] = useState<ICharger[]>([]);
+  const [selectedCharger, setSelectedCharger] = useState<any>();
+
+  const convertToDMS = (decimal: number) => {
+    const degrees = Math.floor(decimal);
+    const minutesDecimal = (decimal - degrees) * 60;
+    const minutes = Math.floor(minutesDecimal);
+    const seconds = Math.round((minutesDecimal - minutes) * 60);
+
+    return `${degrees}° ${minutes}' ${seconds}"`;
+  };
+
+  // Get vehicle connections for the user from DIMO
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -79,11 +113,7 @@ function MyDevicesPage() {
     fetchData();
   }, []);
 
-  useEffect(() => {
-    console.log(vehicleConections);
-  }, [vehicleConections]);
-
-  // Get vehicle data for the user
+  // Get vehicle data for the user from DIMO
   useEffect(() => {
     const fetchData = async (vehicle: any) => {
       try {
@@ -92,9 +122,19 @@ function MyDevicesPage() {
         );
         const query = vehiclesOwnedQuery(vehicle.tokenId);
         const result: any = await client.request(query);
-        console.log(result.vehicle);
+
         // add vehicle to vehicles array
-        setVehicles((vehicles: any) => [...vehicles, result.vehicle as any]);
+        setVehicles((vehicles: any) => [
+          ...vehicles,
+          {
+            chargerType: "",
+            connectorType: "",
+            make: result.vehicle.definition.make,
+            model: result.vehicle.definition.model,
+            year: result.vehicle.definition.year,
+            source: "DIMO",
+          },
+        ]);
       } catch (err: any) {
         console.log(err.message);
       }
@@ -107,119 +147,188 @@ function MyDevicesPage() {
     }
   }, [vehicleConections]);
 
+  // Getting cars owned by the user from Envio indexer
   useEffect(() => {
-    console.log(vehicleConections);
-  }, [vehicleConections]);
-
-  useEffect(() => {
-    const writeData = async () => {
-      // Write to contract
-      const signer = await getSigner();
-
-      const contractAddress = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS || "";
-      const contract = new ethers.Contract(
-        contractAddress,
-        JSON.parse(JSON.stringify(contractABI)),
-        signer
-      );
-
-      const tx = await contract.mintVehicle(
-        metadataIPFSHash,
-        "0xb860d1f279575747c7A7b18f8a2b396EdF648023"
-      );
-      console.log(tx);
-      // Wait for transaction to finish
-      const receipt = await tx.wait();
-      console.log(receipt);
-    };
-
-    if (metadataIPFSHash) {
-      writeData();
-      console.log("Called");
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [metadataIPFSHash]);
-
-  useEffect(() => {
-    const readData = async () => {
-      // Write to contract
-      const signer = await getSigner();
-
-      const contractAddress = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS || "";
-      const contract = new ethers.Contract(
-        contractAddress,
-        JSON.parse(JSON.stringify(contractABI)),
-        signer
-      );
-
-      // TODO - Read from contract
-      // const tx = await contract.mintVehicle(
-      //   metadataIPFSHash,
-      //   "0xb860d1f279575747c7A7b18f8a2b396EdF648023"
-      // );
-      // console.log(tx);
-      // // Wait for transaction to finish
-      // const receipt = await tx.wait();
-      // console.log(receipt);
-    };
-
-    if (address) {
-      readData();
-      console.log("Called");
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [address]);
-
-  useEffect(() => {
-    const fetchData = async () => {
+    const fetchData = async (address: any) => {
       try {
         const client = new GraphQLClient("http://localhost:8080/v1/graphql");
-        const query = testEnvio();
-        const result: any = await client.request(query);
-        console.log(result);
+        const query = vehiclesMinted(address);
+        const vehiclesMintedByUser: any = await client.request(query);
+
+        vehiclesMintedByUser.OnlyCars_VehicleRegistered.forEach(
+          async (vehicle: any) => {
+            console.info("Getting Pinata data for vehicle: ", vehicle.metadata);
+            fetch(`https://gateway.pinata.cloud/ipfs/${vehicle.metadata}`)
+              .then((response) => response.json())
+              .then((response) => {
+                console.log({
+                  chargerType: response.chargerType,
+                  connectorType: response.connectorType,
+                  make: response.make,
+                  model: response.model,
+                  year: response.year,
+                  source: "Morph",
+                });
+                // Add vehicle to vehiclesFromPinata array
+                setVehicles((vehicles: any) => [
+                  ...vehicles,
+                  {
+                    chargerType: response.chargerType,
+                    connectorType: response.connectorType,
+                    make: response.make,
+                    model: response.model,
+                    year: response.year,
+                    source: "Morph",
+                  },
+                ]);
+              })
+              .catch((err) => console.error(err));
+          }
+        );
       } catch (err: any) {
         console.log(err.message);
       }
     };
 
-    fetchData();
-  }, []);
+    if (address) {
+      fetchData(address);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [address]);
+
+  useEffect(() => {
+    console.log(vehicles);
+  }, [vehicles]);
+
+  // CHARGING INFORMATIOM
+  // Getting charging stations owned by the user from Envio indexer
+  useEffect(() => {
+    const fetchData = async (address: any) => {
+      try {
+        const client = new GraphQLClient("http://localhost:8080/v1/graphql");
+        const query = stationsOwned(address);
+        const stationsRegistsredByUser: any = await client.request(query);
+        console.log(stationsRegistsredByUser.OnlyCars_StationRegistered.length);
+
+        const chargersFromPinata: any = [];
+
+        stationsRegistsredByUser.OnlyCars_StationRegistered.forEach(
+          async (station: any) => {
+            console.info("Getting Pinata data for station: ", station.metadata);
+            fetch(`https://gateway.pinata.cloud/ipfs/${station.metadata}`)
+              .then((response) => response.json())
+              .then((response) => {
+                console.log({
+                  name: response.name,
+                  address: response.address,
+                  latitude: response.latitude,
+                  longitude: response.longitude,
+                  chargers: response.chargers,
+                  fastChargerConnectors: response.fastChargerConnectors,
+                  rapidChargerConnectors: response.rapidChargerConnectors,
+                  slowChargerConnectors: response.slowChargerConnectors,
+                });
+                chargersFromPinata.push({
+                  name: response.name,
+                  address: response.address,
+                  latitude: response.latitude,
+                  longitude: response.longitude,
+                  chargers: response.chargers,
+                  fastChargerConnectors: response.fastChargerConnectors,
+                  rapidChargerConnectors: response.rapidChargerConnectors,
+                  slowChargerConnectors: response.slowChargerConnectors,
+                });
+              })
+              .catch((err) => console.error(err));
+          }
+        );
+
+        setChargers(chargersFromPinata);
+      } catch (err: any) {
+        console.log(err.message);
+      }
+    };
+
+    if (address) {
+      fetchData(address);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [address]);
+
+  useEffect(() => {
+    console.log(chargers);
+  }, [chargers]);
 
   return (
     <>
-      <div className="mt-5">
+      <div className="my-10">
         <div>
-          <div className="text-2xl font-bold">Your registered vehicles</div>
+          <div className="flex items-center justify-between">
+            <div className="text-2xl font-bold">Your registered vehicles</div>
+            {vehicles.length > 0 && (
+              <Link
+                href="/dashboard/my-devices/register-vehicle"
+                className="block rounded-md bg-sky-600 px-3 py-2 text-center text-sm font-semibold text-white shadow-sm hover:bg-sky-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-600"
+              >
+                Register Vehicle
+              </Link>
+            )}
+          </div>
           <div className="mt-5 grid grid-cols-3 gap-5">
             {vehicles.map((vehicle: any, index: number) => (
               <div
                 key={index}
-                className="flex items-center justify-between bg-zinc-900/70 border border-zinc-800 p-4 rounded-lg shadow-sm"
+                className="bg-zinc-900/70 border border-zinc-800 p-4 rounded-lg shadow-sm"
               >
-                <div className="flex items-center">
-                  <div className="flex-shrink-0 h-12 w-12">
-                    <img
-                      className="h-12 w-12 rounded-full"
-                      src={`https://ui-avatars.com/api/?name=${vehicle.definition.make}${vehicle.definition.model}&background=random`}
-                      alt={vehicle.name}
-                    />
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center">
+                    <div className="flex-shrink-0 h-12 w-12">
+                      <img
+                        className="h-12 w-12 rounded-full"
+                        src={`https://ui-avatars.com/api/?name=${vehicle.make}${vehicle.model}&background=random`}
+                        alt={vehicle.name}
+                      />
+                    </div>
+                    <div className="ml-4">
+                      <div>
+                        <div className="text-sm font-semibold text-white">
+                          {vehicle.make} {vehicle.model} {vehicle.year}
+                        </div>
+                        <div className="text-sm text-zinc-400">
+                          {vehicle.make}
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                  <div className="ml-4">
-                    <div className="text-sm font-semibold text-white">
-                      {vehicle.definition.make} {vehicle.definition.model}{" "}
-                      {vehicle.definition.year}
-                    </div>
-                    <div className="text-sm text-zinc-400">
-                      {vehicle.definition.make}
-                    </div>
+
+                  <div>
+                    {vehicle.source === "Morph" ? (
+                      <span className="inline-flex items-center rounded-md bg-[#15a800] px-2 py-1 text-xs font-medium text-white ring-1 ring-inset ring-[#15a800]-700/10">
+                        Morph Chain
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center rounded-md bg-[#ade9f3] px-2 py-1 text-xs font-medium text-black ring-1 ring-inset ring-[#ade9f3]-700/10">
+                        DIMO Protocol
+                      </span>
+                    )}
                   </div>
                 </div>
-                <div className="flex items-center">
-                  <div className="text-sm text-zinc-500 mr-4">
-                    {vehicle.licensePlate}
+                {vehicle.chargerType && (
+                  <div className="mt-5 flex items-center">
+                    <div className="text-sm text-zinc-400 mr-4">
+                      {vehicle.chargerType && (
+                        <span>{vehicle.chargerType}</span>
+                      )}
+                      {" -"}
+                      {vehicle.connectorType && (
+                        <span> {vehicle.connectorType} Connector</span>
+                      )}
+                    </div>
+                    {vehicle.connectorType && (
+                      <div className="text-sm text-zinc-500"></div>
+                    )}
                   </div>
-                  <div className="text-sm text-zinc-500">{vehicle.status}</div>
-                </div>
+                )}
               </div>
             ))}
           </div>
@@ -272,60 +381,62 @@ function MyDevicesPage() {
                         scope="col"
                         className="whitespace-nowrap px-2 py-3.5 text-left text-sm font-semibold text-zinc-400"
                       >
-                        Contact Number
+                        Address
                       </th>
                       <th
                         scope="col"
                         className="whitespace-nowrap px-2 py-3.5 text-left text-sm font-semibold text-zinc-400"
                       >
-                        Price
+                        Coordinates
                       </th>
                       <th
                         scope="col"
                         className="whitespace-nowrap px-2 py-3.5 text-left text-sm font-semibold text-zinc-400"
                       >
-                        Date Created
+                        Connections
                       </th>
                       <th
                         scope="col"
                         className="relative whitespace-nowrap py-3.5 pl-3 pr-4 sm:pr-0"
                       >
-                        <span className="sr-only">Edit</span>
+                        <span className="sr-only">Connections</span>
                       </th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-zinc-800">
-                    {chargers.map((charger, index) => (
-                      <tr key={index}>
-                        <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm text-zinc-500 sm:pl-0">
-                          {index + 1}
-                        </td>
-                        <td className="whitespace-nowrap px-2 py-2 text-sm font-medium text-white">
-                          {charger.AddressInfo.Title}
-                        </td>
-                        <td className="whitespace-nowrap px-2 py-2 text-sm text-zinc-200">
-                          {charger.AddressInfo.ContactTelephone1}
-                        </td>
-                        <td className="whitespace-nowrap px-2 py-2 text-sm text-zinc-200">
-                          {charger.UsageCost}
-                        </td>
-                        <td className="whitespace-nowrap px-2 py-2 text-sm text-zinc-200">
-                          {new Date(charger.DateCreated).toLocaleDateString()}
-                        </td>
-                        <td className="relative whitespace-nowrap py-2 pl-3 pr-4 text-right text-sm font-medium sm:pr-0 cursor-pointer">
-                          <span
-                            onClick={() => {
-                              setSelectedCharger(charger);
-                              setModalOpen(true);
-                            }}
-                            className="text-sky-600 hover:text-sky-900"
-                          >
-                            View Connections
-                            <span className="sr-only"></span>
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
+                    {chargers.length > 0 &&
+                      chargers.map((charger, index) => (
+                        <tr key={index}>
+                          <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm text-zinc-500 sm:pl-0">
+                            {index + 1}
+                          </td>
+                          <td className="whitespace-nowrap px-2 py-2 text-sm font-medium text-white">
+                            {charger.name}
+                          </td>
+                          <td className="px-2 py-2 text-sm text-zinc-200 text-wrap">
+                            {charger.address}
+                          </td>
+                          <td className="whitespace-nowrap px-2 py-2 text-sm text-zinc-200">
+                            {convertToDMS(charger.latitude)},{" "}
+                            {convertToDMS(charger.longitude)}
+                          </td>
+                          <td className="whitespace-nowrap px-2 py-2 text-sm text-zinc-200">
+                            {charger.chargers.length} charger(s)
+                          </td>
+                          <td className="relative whitespace-nowrap py-2 pl-3 pr-4 text-right text-sm font-medium sm:pr-0 cursor-pointer">
+                            <span
+                              onClick={() => {
+                                setSelectedCharger(charger);
+                                setModalOpen(true);
+                              }}
+                              className="text-sky-600 hover:text-sky-900"
+                            >
+                              View Connections
+                              <span className="sr-only"></span>
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
                   </tbody>
                 </table>
               </div>
@@ -345,90 +456,98 @@ function MyDevicesPage() {
           <div className="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
             <DialogPanel
               transition
-              className="relative transform overflow-hidden rounded-lg bg-black px-4 pb-4 pt-5 text-left shadow-xl transition-all data-[closed]:translate-y-4 data-[closed]:opacity-0 data-[enter]:duration-300 data-[leave]:duration-200 data-[enter]:ease-out data-[leave]:ease-in sm:my-8 sm:w-full sm:max-w-sm sm:p-6 data-[closed]:sm:translate-y-0 data-[closed]:sm:scale-95"
+              className="relative transform overflow-hidden rounded-lg bg-black px-4 pb-4 pt-5 text-left shadow-xl transition-all data-[closed]:translate-y-4 data-[closed]:opacity-0 data-[enter]:duration-300 data-[leave]:duration-200 data-[enter]:ease-out data-[leave]:ease-in sm:my-8 sm:w-full sm:max-w-5xl sm:p-6 data-[closed]:sm:translate-y-0 data-[closed]:sm:scale-95"
             >
               <div>
                 {selectedCharger && (
                   // map and iterate through the connections
                   <div>
                     <DialogTitle className="text-lg font-semibold text-white">
-                      {selectedCharger.AddressInfo.Title}
+                      {selectedCharger.name}
                     </DialogTitle>
-                    <table className="mt-3">
-                      <tbody>
-                        {selectedCharger?.AddressInfo.Town && (
-                          <tr>
-                            <td className="text-zinc-500 text-sm">Town</td>
-                            <td className="text-zinc-200 text-sm pl-3">
-                              {selectedCharger?.AddressInfo.Town}
-                            </td>
-                          </tr>
-                        )}
-                        {selectedCharger?.AddressInfo.StateOrProvince && (
-                          <tr>
-                            <td className="text-zinc-500 text-sm">
-                              State/Province
-                            </td>
-                            <td className="text-zinc-200 text-sm pl-3">
-                              {selectedCharger?.AddressInfo.StateOrProvince}
-                            </td>
-                          </tr>
-                        )}
-                        {selectedCharger?.AddressInfo.Postcode && (
-                          <tr>
-                            <td className="text-zinc-500 text-sm">Postcode</td>
-                            <td className="text-zinc-200 text-sm pl-3">
-                              {selectedCharger?.AddressInfo.Postcode}
-                            </td>
-                          </tr>
-                        )}
-                        {selectedCharger?.AddressInfo.Country.Title && (
-                          <tr>
-                            <td className="text-zinc-500 text-sm">Country</td>
-                            <td className="text-zinc-200 text-sm pl-3">
-                              {selectedCharger?.AddressInfo.Country.Title}
-                            </td>
-                          </tr>
-                        )}
-                      </tbody>
-                    </table>
+                    <div className="text-sm text-zinc-400">
+                      {selectedCharger.address}
+                    </div>
 
                     <div className="mt-5">
-                      <div className="text-sm font-semibold text-white">
+                      <div className="text-xl font-semibold text-white">
                         Connections
                       </div>
+
                       <div className="mt-2">
-                        {selectedCharger.Connections.map(
-                          (connection, index) => (
-                            <div
-                              key={index}
-                              className="bg-zinc-900/70 p-4 rounded-lg shadow-sm"
-                            >
-                              <div className="flex items-center justify-between">
+                        {selectedCharger.chargers.map(
+                          (charger: any, index: number) => (
+                            <div key={index} className="grid grid-cols-2">
+                              <div className="p-2">
                                 <div className="text-sm font-semibold text-white">
-                                  {connection.ConnectionType.Title}
+                                  {charger.type}
                                 </div>
-                                {connection.Level && connection.Level.Title && (
-                                  <div className="text-sm text-zinc-200">
-                                    {connection.Level.Title}
+                                <div className="text-sm text-zinc-400">
+                                  {charger.time}
+                                </div>
+                                <div className="mt-2 text-sm text-zinc-200">
+                                  Wattage: {charger.wattage}
+                                </div>
+                              </div>
+
+                              <div>
+                                {charger.type === "Rapid Charger" && (
+                                  <div className="mt-2 bg-zinc-900/70 p-4 rounded-lg shadow-sm">
+                                    <h3 className="text-sm font-semibold text-white">
+                                      Rapid Charger Connectors
+                                    </h3>
+                                    {selectedCharger.rapidChargerConnectors.map(
+                                      (connector: any) => (
+                                        <div
+                                          key={connector.id}
+                                          className="mt-1 text-sm text-zinc-200"
+                                        >
+                                          {connector.type} ({connector.pins}{" "}
+                                          pins) - {connector.wattage}
+                                        </div>
+                                      )
+                                    )}
+                                  </div>
+                                )}
+
+                                {charger.type === "Fast Charger" && (
+                                  <div className="mt-2 bg-zinc-900/70 p-4 rounded-lg shadow-sm">
+                                    <h3 className="text-sm font-semibold text-white">
+                                      Fast Charger Connectors
+                                    </h3>
+                                    {selectedCharger.fastChargerConnectors.map(
+                                      (connector: any) => (
+                                        <div
+                                          key={connector.id}
+                                          className="mt-1 text-sm text-zinc-200"
+                                        >
+                                          {connector.type} ({connector.pins}{" "}
+                                          pins) - {connector.wattage}
+                                        </div>
+                                      )
+                                    )}
+                                  </div>
+                                )}
+
+                                {charger.type === "Slow Charger" && (
+                                  <div className="mt-2 bg-zinc-900/70 p-4 rounded-lg shadow-sm">
+                                    <h3 className="text-sm font-semibold text-white">
+                                      Slow Charger Connectors
+                                    </h3>
+                                    {selectedCharger.slowChargerConnectors.map(
+                                      (connector: any) => (
+                                        <div
+                                          key={connector.id}
+                                          className="mt-1 text-sm text-zinc-200"
+                                        >
+                                          {connector.type} ({connector.pins}{" "}
+                                          pins) - {connector.wattage}
+                                        </div>
+                                      )
+                                    )}
                                   </div>
                                 )}
                               </div>
-                              {connection.Quantity && (
-                                <div className="mt-2 text-sm text-zinc-200">
-                                  {connection.Quantity} Unit(s)
-                                </div>
-                              )}
-                              {connection.Amps && (
-                                <div className="mt-2 text-sm text-zinc-200">
-                                  {connection.Amps} Amps
-                                </div>
-                              )}
-                              {connection.Voltage && (
-                                <div className="mt-2 text-sm text-zinc-200">
-                                  {connection.Voltage}V
-                                </div>
-                              )}
                             </div>
                           )
                         )}

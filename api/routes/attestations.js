@@ -12,9 +12,9 @@ const db = require("../db");
 const privateKey = `0x${process.env.PRIVATE_KEY}`;
 
 router.post("/attest", async (req, res) => {
-  let { data, indexingValue } = req.body;
+  let { schemaId, data, indexingValue, type } = req.body;
 
-  schemaId = `SPS_WZ-U7wZdMJyBJnWJsWJ0s`;
+  // vehicleSchemaId = `SPS_WZ-U7wZdMJyBJnWJsWJ0s`;
 
   console.log("Creating attestation with data:", schemaId);
 
@@ -25,24 +25,42 @@ router.post("/attest", async (req, res) => {
       account: privateKeyToAccount(privateKey),
     });
 
-    // Get schema from the SignProtocol server
-    // const schema = await client.getSchema(schemaId);
-    // console.log("Schema:", schema);
+    let attestationInfo;
 
-    // Create attestation
-    const attestationInfo = await client.createAttestation({
-      schemaId,
-      data: {
-        deviceDefinitionId: data.deviceDefinitionId, // "EV-2023-TESLA-M3-LR-01",
-        name: data.name, // "Tesla Model 3 Long Range",
-        make: data.make, // "Tesla",
-        model: data.model, // "Model 3",
-        year: data.year, // "2023",
-        chargerType: data.chargerType, // "Level 2",
-        connectorType: data.connectorType, // "J1772",
-      },
-      indexingValue,
-    });
+    if (type === "vehicle") {
+      // Create attestation for vehicles
+      attestationInfo = await client.createAttestation({
+        schemaId,
+        data: {
+          deviceDefinitionId: data.deviceDefinitionId, // "EV-2023-TESLA-M3-LR-01",
+          name: data.name, // "Tesla Model 3 Long Range",
+          make: data.make, // "Tesla",
+          model: data.model, // "Model 3",
+          year: data.year, // "2023",
+          chargerType: data.chargerType, // "Level 2",
+          connectorType: data.connectorType, // "J1772",
+        },
+        indexingValue,
+      });
+    } else {
+      // Create attestation for charging stations
+      attestationInfo = await client.createAttestation({
+        schemaId,
+        data: {
+          name: data.name,
+          address: data.address,
+          latitude: data.latitude,
+          longitude: data.longitude,
+          chargers: data.chargers,
+          fastChargerConnectors: data.fastChargerConnectors,
+          rapidChargerConnectors: data.rapidChargerConnectors,
+          slowChargerConnectors: data.slowChargerConnectors,
+        },
+        indexingValue,
+      });
+    }
+
+    console.log("Attestation Info:", attestationInfo);
 
     // Store attestation in the database
     const insertResult = await db.query(

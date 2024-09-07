@@ -155,10 +155,7 @@ function RegisterVehiclePage() {
   const [attestationID, setAttestationID] = useState<string>("");
 
   const [showSuccess, setShowSuccess] = useState<boolean>(false);
-  const [showError, setShowError] = useState<boolean>(false);
-  const [error, setError] = useState<string>("");
   const [transactionHash, setTransactionHash] = useState<string>("");
-  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
   useEffect(() => {
     if (vehiclesList.length > 0) {
@@ -278,6 +275,7 @@ function RegisterVehiclePage() {
         .then(async (metadataResponse) => {
           try {
             const attestationPayload = JSON.stringify({
+              schemaId: process.env.NEXT_PUBLIC_SIGN_PROTOCOL_VEHICLE_SCHEMA_ID,
               data: {
                 deviceDefinitionId: inputs.deviceDefinitionId,
                 name: inputs.name,
@@ -288,6 +286,7 @@ function RegisterVehiclePage() {
                 connectorType: inputs.connectorType,
               },
               indexingValue: address,
+              type: "vehicle",
             });
 
             const response: any = await fetch(

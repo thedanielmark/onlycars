@@ -99,12 +99,12 @@ export default function Home() {
                   </div>
                 )}
 
-                <Link
+                <a
                   href={loggedIn ? "/dashboard" : "/"}
                   className="ml-8 inline-flex items-center justify-center whitespace-nowrap rounded-md border border-transparent bg-sky-600 px-4 py-2 text-base font-medium text-white shadow-sm hover:bg-sky-700"
                 >
                   Dashboard
-                </Link>
+                </a>
               </div>
             </div>
 
