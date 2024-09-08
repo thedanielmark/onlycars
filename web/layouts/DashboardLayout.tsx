@@ -85,7 +85,15 @@ const DashboardLayout = ({ children }: LayoutProps) => {
   const [onlyCarsBalance, setOnlyCarsBalance] = useState<number | any>();
   const [selectedDIMOCar, setSelectedDIMOCar] = useState<any>(null);
   const [vehicles, setVehicles] = useState<any[] | any>([]);
-  const stationId = searchParams.get("stationId");
+  const [stationId, setStationId] = useState<string | any>(null);
+
+  useEffect(() => {
+    const stationId = searchParams.get("stationId");
+    if (stationId) {
+      console.log("stationId:", stationId);
+      setStationId(stationId);
+    }
+  }, []);
 
   // Getting Web3Auth wallet balance
   useEffect(() => {
@@ -379,14 +387,13 @@ const DashboardLayout = ({ children }: LayoutProps) => {
 
   // Check if url has stationId query param
   useEffect(() => {
-    const stationId = searchParams.get("stationId");
     if (stationId) {
       console.log("stationId:", stationId);
       // use station logic here
       setUseStationModal(true);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [stationId]);
 
   // Getting cars owned by the user from Envio indexer
   useEffect(() => {
