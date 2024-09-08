@@ -77,7 +77,7 @@ router.post("/station-created", async (req, res) => {
       currentWalletAddress
     );
     await conversation.send(
-      `You have successfully registered your EV charging station located at ${address} under the name - ${name}, on the OnlyCars network.\n\nYour charger configuration is as follows:\n\nAddress: ${locationAddress}\nLatitude: ${latitude}\nLongitude: ${longitude}\n\nOther drivers can now start using your charging station and pay for charging services on the OnlyCars network.\n\nYou will receive regular notifications about your charger's status and charging activities.\n\nThank you for choosing OnlyCars!`
+      `You have successfully registered your EV charging station located at ${locationAddress} under the name - ${name}, on the OnlyCars network.\n\nYour charger configuration is as follows:\n\nAddress: ${locationAddress}\nLatitude: ${latitude}\nLongitude: ${longitude}\n\nOther drivers can now start using your charging station and pay for charging services on the OnlyCars network.\n\nYou will receive regular notifications about your charger's status and charging activities.\n\nThank you for choosing OnlyCars!`
     );
     console.log(`Message successfully sent to ${currentWalletAddress}`);
     res.status(200).json({ success: true });
