@@ -9,12 +9,17 @@ import {
   ComboboxOption,
   ComboboxOptions,
   Label,
+  Listbox,
+  ListboxButton,
+  ListboxOption,
+  ListboxOptions,
   Radio,
   RadioGroup,
 } from "@headlessui/react";
 import { CheckCircleIcon } from "@heroicons/react/20/solid";
 import {
   CheckIcon,
+  ChevronUpDownIcon,
   InformationCircleIcon,
   MagnifyingGlassIcon,
 } from "@heroicons/react/24/outline";
@@ -23,6 +28,7 @@ import { useAuth } from "@/providers/AuthProvider";
 import { ethers, toUtf8Bytes } from "ethers";
 import { contractABI } from "@/utils/contractABI";
 import { RotatingLines } from "react-loader-spinner";
+import { deviceDefinitions } from "@/utils/deviceDefinitions";
 
 const chargersList = [
   {
@@ -102,23 +108,40 @@ const slowConnectorsList = [
   },
 ];
 
-// Function to convert Base64 URL-safe to Hex
-function base64ToHex(base64: string): string {
-  // Replace URL-safe characters with standard Base64 characters
-  base64 = base64.replace(/-/g, "+").replace(/_/g, "/");
-
-  // Add padding if necessary
-  const pad = base64.length % 4;
-  if (pad) {
-    base64 += "=".repeat(4 - pad);
-  }
-
-  // Convert the Base64 string to a binary buffer
-  const binary = Buffer.from(base64, "base64");
-
-  // Convert the binary data to a hexadecimal string
-  return "0x" + binary.toString("hex");
-}
+// const dimoCars = [
+//   {
+//     tokenId: 100387,
+//     owner: "0x8Db0bE570F1Fdbb89b11F2629d284a952e2c6C39",
+//   },
+//   {
+//     tokenId: 81202,
+//     owner: "0x7DFBe182BED2A945eD8E8eDcCF9f71b43D5036E0",
+//   },
+//   {
+//     tokenId: 81201,
+//     owner: "0x7DFBe182BED2A945eD8E8eDcCF9f71b43D5036E0",
+//   },
+//   {
+//     tokenId: 81200,
+//     owner: "0x7DFBe182BED2A945eD8E8eDcCF9f71b43D5036E0",
+//   },
+//   {
+//     tokenId: 22892,
+//     owner: "0xB8E514da5E7b2918AebC139ae7CbEFc3727f05D3",
+//   },
+//   {
+//     tokenId: 22279,
+//     owner: "0xbA88168Abd7E9d53A03bE6Ec63f6ed30d466C451",
+//   },
+//   {
+//     tokenId: 21957,
+//     owner: "0xf9D26323Ab49179A6d57C26515B01De018553787",
+//   },
+//   {
+//     tokenId: 3,
+//     owner: "0xd744468B9192301650f8Cb5e390BdD824DFA6Dd9",
+//   },
+// ];
 
 function RegisterVehiclePage() {
   const { address, getSigner } = useAuth();
@@ -157,6 +180,8 @@ function RegisterVehiclePage() {
   const [showSuccess, setShowSuccess] = useState<boolean>(false);
   const [transactionHash, setTransactionHash] = useState<string>("");
 
+  const [selectedDIMOCar, setSelectedDIMOCar] = useState(deviceDefinitions[3]);
+
   useEffect(() => {
     if (vehiclesList.length > 0) {
       const filteredVehicleProfilesTemp = vehiclesList.filter(
@@ -175,33 +200,32 @@ function RegisterVehiclePage() {
   }, [vehiclesList]);
 
   useEffect(() => {
-    const timeout = setTimeout(() => {
-      async function getUsers() {
-        fetch(
-          `${process.env.NEXT_PUBLIC_DIMO_API_URL}/device-definitions/search?query=${searchQuery}`
-        ).then((response) => {
-          response.json().then((data) => {
-            setVehiclesList(data.deviceDefinitions);
-          });
-        });
+    // Get device definitions by looping through the deviceDefinitions array
+    const getDeviceDefinitions = async (selectedDIMOCar: any) => {
+      const deviceDefinition = deviceDefinitions.find(
+        (deviceDefinition) =>
+          deviceDefinition.tokenId === selectedDIMOCar.tokenId
+      );
+
+      if (deviceDefinition) {
+        setVehicleProfile(deviceDefinition.definition);
       }
-      if (searchQuery) getUsers();
-    }, 0.5);
+    };
 
-    return () => clearTimeout(timeout);
-  }, [searchQuery]);
+    getDeviceDefinitions(selectedDIMOCar);
+  }, [selectedDIMOCar]);
 
-  useEffect(() => {
-    console.log(searchQuery);
-    console.log(inputs);
-  }, [searchQuery, inputs]);
+  // useEffect(() => {
+  //   console.log(searchQuery);
+  //   console.log(inputs);
+  // }, [searchQuery, inputs]);
 
   // Setting the make, model and year of the vehicle based on the selected vehicle profile
   useEffect(() => {
     if (vehicleProfile) {
       setInputs({
         ...inputs,
-        deviceDefinitionId: vehicleProfile.legacy_ksuid,
+        deviceDefinitionId: vehicleProfile.id,
         make: vehicleProfile.make,
         model: vehicleProfile.model,
         year: vehicleProfile.year,
@@ -390,7 +414,7 @@ function RegisterVehiclePage() {
                 </p>
               </div>
 
-              <div className="grid grid-cols-3 gap-6">
+              <div className="grid grid-cols-6 gap-6">
                 {/* Name start */}
                 <div className="col-span-3 sm:col-span-3">
                   <div className="rounded-md px-3 pb-1.5 pt-2.5 shadow-sm ring-1 ring-inset ring-zinc-800 focus-within:ring-2 focus-within:ring-sky-600">
@@ -408,92 +432,67 @@ function RegisterVehiclePage() {
                       value={inputs.name}
                       onChange={handleInputChange}
                       placeholder="Danny's Lexus RX 350"
-                      className="block w-full border-0 p-0 bg-transparent text-white placeholder:text-zinc-400 focus:ring-0 sm:text-sm sm:leading-6"
+                      className="block w-full border-0 py-1.5 px-0 bg-transparent text-white placeholder:text-zinc-400 focus:ring-0 sm:text-sm sm:leading-6"
                     />
                   </div>
                 </div>
                 {/* Name end */}
-
-                {/* Search start */}
+                {/* Choose DIMO test vehicle start */}
                 <div className="col-span-3 sm:col-span-3">
-                  <Combobox
-                    as="div"
-                    className="rounded-md px-3 pb-1.5 pt-2.5 shadow-sm ring-1 ring-inset ring-zinc-800 focus-within:ring-2 focus-within:ring-sky-600"
-                    value={vehicleProfile}
-                    onChange={(selectedVehicleProfile) => {
-                      setSearchQuery("");
-                      setVehicleProfile(selectedVehicleProfile ?? undefined);
-                    }}
-                  >
-                    <Label className="block text-xs font-medium text-zinc-200">
-                      Enter the make or model of your vehicle
-                    </Label>
-                    <div className="relative mt-2">
-                      <ComboboxInput
-                        className="block w-full border-0 p-0 bg-transparent text-white placeholder:text-zinc-400 focus:ring-0 sm:text-sm sm:leading-6"
-                        onChange={(event) => setSearchQuery(event.target.value)}
-                        onBlur={() => setSearchQuery("")}
-                        displayValue={(vehicle: { name?: string }) =>
-                          vehicle?.name || ""
-                        }
-                        placeholder="Tesla Model 3"
-                        required={true}
-                      />
-                      <ComboboxButton className="absolute inset-y-0 right-0 flex items-center rounded-r-md px-2 focus:outline-none">
-                        <MagnifyingGlassIcon
-                          className="h-5 w-5 text-zinc-400"
-                          aria-hidden="true"
-                        />
-                      </ComboboxButton>
+                  <div className="rounded-md px-3 pb-1.5 pt-2.5 shadow-sm ring-1 ring-inset ring-zinc-800 focus-within:ring-2 focus-within:ring-sky-600">
+                    <label
+                      htmlFor="name"
+                      className="block text-xs font-medium text-zinc-200"
+                    >
+                      Token ID of DIMO Test Vehicle
+                    </label>
+                    <Listbox
+                      value={selectedDIMOCar}
+                      onChange={setSelectedDIMOCar}
+                    >
+                      <div className="relative">
+                        <ListboxButton className="relative w-full cursor-default rounded-md text-white py-1.5 text-left shadow-sm focus:outline-none sm:text-sm sm:leading-6">
+                          <span className="block truncate">
+                            {selectedDIMOCar.tokenId}
+                          </span>
+                          <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
+                            <ChevronUpDownIcon
+                              aria-hidden="true"
+                              className="h-5 w-5 text-zinc-400"
+                            />
+                          </span>
+                        </ListboxButton>
 
-                      {filteredVehicleProfiles.length > 0 && (
-                        <ComboboxOptions className="absolute z-10 mt-1 max-h-56 w-full overflow-auto rounded-md bg-zinc-900 py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm">
-                          {filteredVehicleProfiles.map(
-                            (vehicleProfile: any) => (
-                              <ComboboxOption
-                                key={vehicleProfile.id}
-                                value={vehicleProfile}
-                                className="group relative cursor-default select-none py-2 pl-3 pr-9 text-zinc-200 data-[focus]:bg-sky-600 data-[focus]:text-white"
-                              >
-                                <div className="flex items-center">
-                                  {vehicleProfile.imageUrl ? (
-                                    <img
-                                      src={vehicleProfile.imageUrl}
-                                      alt=""
-                                      className="h-6 w-6 flex-shrink-0 rounded-full"
-                                    />
-                                  ) : (
-                                    <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-zinc-500">
-                                      <span className="font-medium leading-none text-white text-xs">
-                                        {`${vehicleProfile.make.charAt(
-                                          0
-                                        )}${vehicleProfile.model.charAt(0)}`}
-                                      </span>
-                                    </span>
-                                  )}
-                                  <span className="ml-3 truncate group-data-[selected]:font-semibold">
-                                    {vehicleProfile.name}
-                                  </span>
-                                </div>
+                        <ListboxOptions
+                          transition
+                          className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md bg-black py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none data-[closed]:data-[leave]:opacity-0 data-[leave]:transition data-[leave]:duration-100 data-[leave]:ease-in sm:text-sm"
+                        >
+                          {deviceDefinitions.map((car, index) => (
+                            <ListboxOption
+                              key={index}
+                              value={car}
+                              className="group relative cursor-default select-none py-2 pl-3 pr-9 text-zinc-200 data-[focus]:bg-sky-600 data-[focus]:text-white"
+                            >
+                              <span className="block truncate font-normal group-data-[selected]:font-semibold">
+                                {car.tokenId}
+                              </span>
 
-                                <span className="absolute inset-y-0 right-0 hidden items-center pr-4 text-sky-600 group-data-[selected]:flex group-data-[focus]:text-white">
-                                  <CheckIcon
-                                    className="h-5 w-5"
-                                    aria-hidden="true"
-                                  />
-                                </span>
-                              </ComboboxOption>
-                            )
-                          )}
-                        </ComboboxOptions>
-                      )}
-                    </div>
-                  </Combobox>
+                              <span className="absolute inset-y-0 right-0 flex items-center pr-4 text-sky-600 group-data-[focus]:text-white [.group:not([data-selected])_&]:hidden">
+                                <CheckIcon
+                                  aria-hidden="true"
+                                  className="h-5 w-5"
+                                />
+                              </span>
+                            </ListboxOption>
+                          ))}
+                        </ListboxOptions>
+                      </div>
+                    </Listbox>
+                  </div>
                 </div>
-                {/* Search end */}
-
+                {/* Choose DIMO test vehicle end */}
                 {/* Make start */}
-                <div className="col-span-3 sm:col-span-1">
+                <div className="col-span-3 sm:col-span-2">
                   <div className="rounded-md px-3 pb-1.5 pt-2.5 shadow-sm ring-1 ring-inset ring-zinc-800 focus-within:ring-2 focus-within:ring-sky-600">
                     <label
                       htmlFor="make"
@@ -513,8 +512,9 @@ function RegisterVehiclePage() {
                   </div>
                 </div>
                 {/* Make end */}
+
                 {/* Model start */}
-                <div className="col-span-3 sm:col-span-1">
+                <div className="col-span-3 sm:col-span-2">
                   <div className="rounded-md px-3 pb-1.5 pt-2.5 shadow-sm ring-1 ring-inset ring-zinc-800 focus-within:ring-2 focus-within:ring-sky-600">
                     <label
                       htmlFor="model"
@@ -534,8 +534,9 @@ function RegisterVehiclePage() {
                   </div>
                 </div>
                 {/* Model end */}
+
                 {/* Year start */}
-                <div className="col-span-3 sm:col-span-1">
+                <div className="col-span-3 sm:col-span-2">
                   <div className="rounded-md px-3 pb-1.5 pt-2.5 shadow-sm ring-1 ring-inset ring-zinc-800 focus-within:ring-2 focus-within:ring-sky-600">
                     <label
                       htmlFor="year"
@@ -555,8 +556,9 @@ function RegisterVehiclePage() {
                   </div>
                 </div>
                 {/* Year end */}
+
                 {/* Charger type start */}
-                <div className="col-span-3 sm:col-span-3">
+                <div className="col-span-3 sm:col-span-6">
                   <fieldset>
                     <legend className="text-sm font-semibold leading-6 text-white">
                       What type of charger does your vehicle use?
@@ -600,10 +602,9 @@ function RegisterVehiclePage() {
                   </fieldset>
                 </div>
                 {/* Charger type end */}
-
                 {/* Rapid Connectors Start */}
                 {selectedChargersList.id === 1 && (
-                  <div className="col-span-3 sm:col-span-3">
+                  <div className="col-span-3 sm:col-span-6">
                     <fieldset>
                       <legend className="text-sm font-semibold leading-6 text-white">
                         What type of connector does your vehicle use?
@@ -648,7 +649,6 @@ function RegisterVehiclePage() {
                   </div>
                 )}
                 {/* Rapid Connectors end */}
-
                 {/* Fast Connectors Start */}
                 {selectedChargersList.id === 2 && (
                   <div className="col-span-3 sm:col-span-3">
@@ -696,7 +696,6 @@ function RegisterVehiclePage() {
                   </div>
                 )}
                 {/* Fast Connectors end */}
-
                 {/* Slow Connectors Start */}
                 {selectedChargersList.id === 3 && (
                   <div className="col-span-3 sm:col-span-3">

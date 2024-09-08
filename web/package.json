@@ -37,6 +37,7 @@
     "react-dom": "^18",
     "react-loader-spinner": "^6.1.6",
     "react-map-gl": "^7.1.7",
+    "react-webcam": "^7.2.0",
     "viem": "2.x",
     "wagmi": "^2.12.8",
     "web3": "^4.11.1"

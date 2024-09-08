@@ -27,7 +27,8 @@
     "**/*.ts",
     "**/*.tsx",
     ".next/types/**/*.ts",
-    "components/MapBox.tsx"
+    "components/MapBox.tsx",
+    "utils/qr.js"
   ],
   "exclude": ["node_modules"]
 }

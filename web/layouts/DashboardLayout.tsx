@@ -26,7 +26,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { IUserPayload } from "@/utils/types/IUserData";
 import { RotatingLines } from "react-loader-spinner";
-import { ethers, JsonRpcSigner, parseEther } from "ethers";
+import { ethers, formatEther, JsonRpcSigner, parseEther } from "ethers";
 import {
   createConsentMessage,
   createConsentProofPayload,
@@ -71,6 +71,7 @@ const DashboardLayout = ({ children }: LayoutProps) => {
   const [subscriptionStatus, setSubscriptionStatus] = useState<boolean>(false);
   const [walletModalOpen, setWalletModalOpen] = useState<boolean>(false);
   const [balance, setBalance] = useState<number | null>(null);
+  const [onlyCarsBalance, setOnlyCarsBalance] = useState<number | any>();
 
   useEffect(() => {
     const getTheBalance = async () => {
@@ -330,6 +331,34 @@ const DashboardLayout = ({ children }: LayoutProps) => {
     }
   };
 
+  useEffect(() => {
+    // TODO Fix this shit
+    const getContractBalance = async () => {
+      const signer = await getSigner();
+      const contractAddress = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS || "";
+
+      const contract = new ethers.Contract(
+        contractAddress,
+        contractABI,
+        signer
+      );
+      console.log(signer.address);
+      try {
+        // Call the balances function with the address parameter
+        const balance = await contract.balances(signer.address); // Note: view function, no .wait()
+        console.log(balance);
+        setOnlyCarsBalance(`${formatEther(balance)}`);
+      } catch (error) {
+        console.error("Error fetching balance:", error);
+      }
+    };
+
+    if (loggedIn) {
+      getContractBalance();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loggedIn]);
+
   return (
     <>
       {isLoading ? (
@@ -560,28 +589,71 @@ const DashboardLayout = ({ children }: LayoutProps) => {
           <div className="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
             <DialogPanel
               transition
-              className="relative transform overflow-hidden rounded-lg bg-black px-4 pb-4 pt-5 text-left shadow-xl transition-all data-[closed]:translate-y-4 data-[closed]:opacity-0 data-[enter]:duration-300 data-[leave]:duration-200 data-[enter]:ease-out data-[leave]:ease-in sm:my-8 sm:w-full sm:max-w-sm sm:p-6 data-[closed]:sm:translate-y-0 data-[closed]:sm:scale-95"
+              className="relative transform overflow-hidden rounded-lg bg-black px-4 pb-4 pt-5 text-left shadow-xl transition-all data-[closed]:translate-y-4 data-[closed]:opacity-0 data-[enter]:duration-300 data-[leave]:duration-200 data-[enter]:ease-out data-[leave]:ease-in sm:my-8 sm:w-full sm:max-w-lg sm:p-6 data-[closed]:sm:translate-y-0 data-[closed]:sm:scale-95"
             >
               <div>
                 <div>
-                  <DialogTitle className="text-lg font-semibold text-white">
-                    Your Wallet
+                  <DialogTitle className="px-2 text-xl font-bold text-white">
+                    Your Wallets
                   </DialogTitle>
                   <div className="text-sm text-zinc-400"></div>
 
-                  <div className="mt-5 flex items-center gap-x-2">
-                    <div>
-                      <img
-                        src="https://cryptologos.cc/logos/ethereum-eth-logo.png"
-                        alt="Eth"
-                        className="h-6 w-6 mx-auto"
-                      />
+                  <div className="mt-3 bg-zinc-900/70 border border-zinc-800 p-4 rounded-lg shadow-sm">
+                    <h3 className="text-sm font-semibold text-white">
+                      Web3Auth Wallet Balance <br />
+                      <span className="text-zinc-400 font-light text-xs">
+                        ({address})
+                      </span>
+                    </h3>
+                    <div className="mt-3 flex items-center gap-x-2">
+                      <div>
+                        <img
+                          src="https://cryptologos.cc/logos/ethereum-eth-logo.png"
+                          alt="Eth"
+                          className="h-6 w-6 mx-auto"
+                        />
+                      </div>
+                      <div className="text-sm">{balance && balance} ETH</div>
                     </div>
-                    <div>{balance && balance} ETH</div>
+                  </div>
+
+                  <div className="mt-2 text-xs text-zinc-400">
+                    This balance is used to pay for transactions inside the app.
+                    Ensure sufficient funds are available to avoid transaction
+                    failures.
+                  </div>
+
+                  <div className="border-t border-zinc-800 my-5 w-full" />
+
+                  <div className="mt-3 bg-zinc-900/70 border border-zinc-800 p-4 rounded-lg shadow-sm">
+                    <h3 className="text-sm font-semibold text-white">
+                      OnlyCars Wallet Balance <br />
+                      <span className="text-zinc-400 font-light text-xs">
+                        ({process.env.NEXT_PUBLIC_CONTRACT_ADDRESS})
+                      </span>
+                    </h3>
+                    <div className="mt-3 flex items-center gap-x-2">
+                      <div>
+                        <img
+                          src="https://cryptologos.cc/logos/ethereum-eth-logo.png"
+                          alt="Eth"
+                          className="h-6 w-6 mx-auto"
+                        />
+                      </div>
+                      <div className="text-sm">
+                        {onlyCarsBalance && onlyCarsBalance} ETH
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-2 text-xs text-zinc-400">
+                    This balance is used to pay for usage of chargers. You have
+                    to keep this topped up before you can start charging your
+                    vehicle.
                   </div>
                 </div>
               </div>
-              <div className="mt-5 sm:mt-6">
+              <div className="mt-5">
                 <button
                   type="button"
                   onClick={handleTopUpWallet}
