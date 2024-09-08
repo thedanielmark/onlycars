@@ -12,14 +12,14 @@ const clientId = process.env.NEXT_PUBLIC_WEB3AUTH_CLIENT_ID || "";
 
 const chainConfig = {
   chainNamespace: CHAIN_NAMESPACES.EIP155,
-  chainId: "0xAA36A7",
+  chainId: "0xafa",
   rpcTarget:
     "https://eth-sepolia.g.alchemy.com/v2/4aXwWgRAyOxgQdQftRqG7yJ5LMumJwmP",
-  displayName: "Ethereum Sepolia Testnet",
-  blockExplorerUrl: "https://sepolia.etherscan.io",
+  displayName: "Morph Holesky Testnet",
+  blockExplorerUrl: "https://explorer-holesky.morphl2.io/",
   ticker: "ETH",
   tickerName: "Ethereum",
-  logo: "https://cryptologos.cc/logos/ethereum-eth-logo.png",
+  logo: "https://media.licdn.com/dms/image/v2/D560BAQFKfuiRMTw2Mw/company-logo_200_200/company-logo_200_200/0/1715008740254/morphl2_logo?e=2147483647&v=beta&t=AG8RDjz65LhXakzsqcRQ0DA2Njuggw6Z5hwByLapGfo",
 };
 
 const privateKeyProvider = new EthereumPrivateKeyProvider({
