@@ -510,7 +510,7 @@ const DashboardLayout = ({ children }: LayoutProps) => {
           })
           .then((data) => {
             console.log("Success:", data);
-            // TODO close the modal
+            setUseStationModal(false);
           })
           .catch((error) => {
             console.error("Error:", error);
@@ -629,10 +629,10 @@ const DashboardLayout = ({ children }: LayoutProps) => {
                   </Menu>
                   {loggedIn && (
                     <div className="ml-3">
-                      <p className="text-sm font-medium text-gray-700 group-hover:text-gray-900">
+                      <p className="text-sm font-medium text-white group-hover:text-white">
                         {user.name}
                       </p>
-                      <p className="text-xs font-medium text-gray-500 group-hover:text-gray-700">
+                      <p className="text-xs font-medium text-zinc-500 group-hover:text-zinc-200">
                         {user.email}
                       </p>
                     </div>
@@ -746,7 +746,7 @@ const DashboardLayout = ({ children }: LayoutProps) => {
       >
         <DialogBackdrop
           transition
-          className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity data-[closed]:opacity-0 data-[enter]:duration-300 data-[leave]:duration-200 data-[enter]:ease-out data-[leave]:ease-in"
+          className="fixed inset-0 bg-zinc-500 bg-opacity-75 transition-opacity data-[closed]:opacity-0 data-[enter]:duration-300 data-[leave]:duration-200 data-[enter]:ease-out data-[leave]:ease-in"
         />
 
         <div className="fixed inset-0 z-10 w-screen overflow-y-auto">
@@ -847,7 +847,7 @@ const DashboardLayout = ({ children }: LayoutProps) => {
       >
         <DialogBackdrop
           transition
-          className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity data-[closed]:opacity-0 data-[enter]:duration-300 data-[leave]:duration-200 data-[enter]:ease-out data-[leave]:ease-in"
+          className="fixed inset-0 bg-zinc-500 bg-opacity-75 transition-opacity data-[closed]:opacity-0 data-[enter]:duration-300 data-[leave]:duration-200 data-[enter]:ease-out data-[leave]:ease-in"
         />
 
         <div className="fixed inset-0 z-10 w-screen overflow-y-auto">

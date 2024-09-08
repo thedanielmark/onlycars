@@ -13,6 +13,7 @@ var checkUserOnXMTPRouter = require("./routes/check-user-on-xmtp");
 var subscribeRouter = require("./routes/subscribe");
 var attestationsRouter = require("./routes/attestations");
 var broadcastRouter = require("./routes/broadcast");
+var telemetryRouter = require("./routes/telemetry");
 
 var app = express();
 
@@ -33,6 +34,7 @@ app.use("/check-user-on-xmtp", checkUserOnXMTPRouter);
 app.use("/subscribe", subscribeRouter);
 app.use("/attestations", attestationsRouter);
 app.use("/broadcast", broadcastRouter);
+app.use("/telemetry", telemetryRouter);
 
 app.listen(5000, () => {
   console.log(`Example app listening on port 5000`);
