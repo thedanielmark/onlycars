@@ -372,9 +372,41 @@ function RegisterVehiclePage() {
       // Wait for transaction to finish
       const receipt = await tx.wait();
       if (receipt.status === 1) {
-        setShowSuccess(true);
-        setTransactionHash(receipt.hash);
-        setIsLoading(false);
+        // POST request to API
+        const url = `${process.env.NEXT_PUBLIC_API_ROUTE}/broadcast/vehicle-created`;
+
+        const payload: { [key: string]: any } = {
+          address,
+        };
+
+        // Push inputs into payload using map
+        Object.keys(inputs).map((key: any) => {
+          payload[key] = inputs[key];
+        });
+
+        // Send a POST request
+        fetch(url, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json", // Indicates you're sending JSON data
+          },
+          body: JSON.stringify(payload), // Convert the data object to JSON string
+        })
+          .then((response) => {
+            if (!response.ok) {
+              throw new Error("Network response was not ok");
+            }
+            return response.json(); // Parse the JSON response
+          })
+          .then((data) => {
+            console.log("Success:", data);
+            setShowSuccess(true);
+            setTransactionHash(receipt.hash);
+            setIsLoading(false);
+          })
+          .catch((error) => {
+            console.error("Error:", error);
+          });
       }
     };
 
@@ -444,7 +476,7 @@ function RegisterVehiclePage() {
                       htmlFor="name"
                       className="block text-xs font-medium text-zinc-200"
                     >
-                      Token ID of DIMO Test Vehicle
+                      DIMO Test Vehicle you&apos;re emulating
                     </label>
                     <Listbox
                       value={selectedDIMOCar}
@@ -453,7 +485,13 @@ function RegisterVehiclePage() {
                       <div className="relative">
                         <ListboxButton className="relative w-full cursor-default rounded-md text-white py-1.5 text-left shadow-sm focus:outline-none sm:text-sm sm:leading-6">
                           <span className="block truncate">
-                            {selectedDIMOCar.tokenId}
+                            {selectedDIMOCar.definition.make}{" "}
+                            {selectedDIMOCar.definition.model}{" "}
+                            {selectedDIMOCar.definition.year} (
+                            <span className="text-sky-600">
+                              {selectedDIMOCar.tokenId}
+                            </span>
+                            )
                           </span>
                           <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
                             <ChevronUpDownIcon
@@ -474,7 +512,8 @@ function RegisterVehiclePage() {
                               className="group relative cursor-default select-none py-2 pl-3 pr-9 text-zinc-200 data-[focus]:bg-sky-600 data-[focus]:text-white"
                             >
                               <span className="block truncate font-normal group-data-[selected]:font-semibold">
-                                {car.tokenId}
+                                {car.definition.make} {car.definition.model}{" "}
+                                {car.definition.year} ({car.tokenId})
                               </span>
 
                               <span className="absolute inset-y-0 right-0 flex items-center pr-4 text-sky-600 group-data-[focus]:text-white [.group:not([data-selected])_&]:hidden">

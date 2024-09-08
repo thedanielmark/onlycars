@@ -54,6 +54,7 @@ import stationsOwned from "@/utils/queries/stationsOwned";
 // ];
 
 interface IVehicle {
+  name: string;
   chargerType: string;
   connectorType: string;
   make: string;
@@ -94,58 +95,58 @@ function MyDevicesPage() {
   };
 
   // Get vehicle connections for the user from DIMO
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const client = new GraphQLClient(
-          process.env.NEXT_PUBLIC_DIMO_GRAPHQL_URL || ""
-        );
-        const query = vehicleConnectionsQuery(
-          process.env.NEXT_PUBLIC_DIMO_CLIENT_ID || ""
-        );
-        const result: any = await client.request(query);
-        setVehicleConnections(result.vehicles.nodes);
-      } catch (err: any) {
-        console.log(err.message);
-      }
-    };
+  // useEffect(() => {
+  //   const fetchData = async () => {
+  //     try {
+  //       const client = new GraphQLClient(
+  //         process.env.NEXT_PUBLIC_DIMO_GRAPHQL_URL || ""
+  //       );
+  //       const query = vehicleConnectionsQuery(
+  //         process.env.NEXT_PUBLIC_DIMO_CLIENT_ID || ""
+  //       );
+  //       const result: any = await client.request(query);
+  //       setVehicleConnections(result.vehicles.nodes);
+  //     } catch (err: any) {
+  //       console.log(err.message);
+  //     }
+  //   };
 
-    fetchData();
-  }, []);
+  //   fetchData();
+  // }, []);
 
   // Get vehicle data for the user from DIMO
-  useEffect(() => {
-    const fetchData = async (vehicle: any) => {
-      try {
-        const client = new GraphQLClient(
-          process.env.NEXT_PUBLIC_DIMO_GRAPHQL_URL || ""
-        );
-        const query = vehiclesOwnedQuery(vehicle.tokenId);
-        const result: any = await client.request(query);
+  // useEffect(() => {
+  //   const fetchData = async (vehicle: any) => {
+  //     try {
+  //       const client = new GraphQLClient(
+  //         process.env.NEXT_PUBLIC_DIMO_GRAPHQL_URL || ""
+  //       );
+  //       const query = vehiclesOwnedQuery(vehicle.tokenId);
+  //       const result: any = await client.request(query);
 
-        // add vehicle to vehicles array
-        setVehicles((vehicles: any) => [
-          ...vehicles,
-          {
-            chargerType: "",
-            connectorType: "",
-            make: result.vehicle.definition.make,
-            model: result.vehicle.definition.model,
-            year: result.vehicle.definition.year,
-            source: "DIMO",
-          },
-        ]);
-      } catch (err: any) {
-        console.log(err.message);
-      }
-    };
+  //       // add vehicle to vehicles array
+  //       setVehicles((vehicles: any) => [
+  //         ...vehicles,
+  //         {
+  //           chargerType: "",
+  //           connectorType: "",
+  //           make: result.vehicle.definition.make,
+  //           model: result.vehicle.definition.model,
+  //           year: result.vehicle.definition.year,
+  //           source: "DIMO",
+  //         },
+  //       ]);
+  //     } catch (err: any) {
+  //       console.log(err.message);
+  //     }
+  //   };
 
-    if (vehicleConections.length > 0) {
-      vehicleConections.forEach((vehicle: any) => {
-        fetchData(vehicle);
-      });
-    }
-  }, [vehicleConections]);
+  //   if (vehicleConections.length > 0) {
+  //     vehicleConections.forEach((vehicle: any) => {
+  //       fetchData(vehicle);
+  //     });
+  //   }
+  // }, [vehicleConections]);
 
   // Getting cars owned by the user from Envio indexer
   useEffect(() => {
@@ -155,36 +156,48 @@ function MyDevicesPage() {
         const query = vehiclesMinted(address);
         const vehiclesMintedByUser: any = await client.request(query);
 
-        vehiclesMintedByUser.OnlyCars_VehicleRegistered.forEach(
-          async (vehicle: any) => {
-            console.info("Getting Pinata data for vehicle: ", vehicle.metadata);
-            fetch(`https://gateway.pinata.cloud/ipfs/${vehicle.metadata}`)
-              .then((response) => response.json())
-              .then((response) => {
-                console.log({
-                  chargerType: response.chargerType,
-                  connectorType: response.connectorType,
-                  make: response.make,
-                  model: response.model,
-                  year: response.year,
-                  source: "Morph",
-                });
-                // Add vehicle to vehiclesFromPinata array
-                setVehicles((vehicles: any) => [
-                  ...vehicles,
-                  {
+        const vehicleFromFetch = await Promise.all(
+          vehiclesMintedByUser.OnlyCars_VehicleRegistered.map(
+            async (vehicle: any) => {
+              console.info(
+                "Getting Pinata data for vehicle: ",
+                vehicle.metadata
+              );
+              return fetch(
+                `https://gateway.pinata.cloud/ipfs/${vehicle.metadata}`
+              )
+                .then((response) => response.json())
+                .then((response) => {
+                  console.log({
+                    name: response.name,
                     chargerType: response.chargerType,
                     connectorType: response.connectorType,
                     make: response.make,
                     model: response.model,
                     year: response.year,
                     source: "Morph",
-                  },
-                ]);
-              })
-              .catch((err) => console.error(err));
-          }
+                  });
+                  return {
+                    name: response.name,
+                    chargerType: response.chargerType,
+                    connectorType: response.connectorType,
+                    make: response.make,
+                    model: response.model,
+                    year: response.year,
+                    source: "Morph",
+                  };
+                })
+                .catch((err) => console.error(err));
+            }
+          )
         );
+
+        setVehicles(vehicleFromFetch);
+        // console.log("vehiclesFromPinata set");
+        console.log(vehicles);
+        // if (vehiclesFromPinata) {
+        //   setVehicles(vehiclesFromPinata);
+        // }
       } catch (err: any) {
         console.log(err.message);
       }
@@ -196,10 +209,6 @@ function MyDevicesPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [address]);
 
-  useEffect(() => {
-    console.log(vehicles);
-  }, [vehicles]);
-
   // CHARGING INFORMATIOM
   // Getting charging stations owned by the user from Envio indexer
   useEffect(() => {
@@ -210,37 +219,42 @@ function MyDevicesPage() {
         const stationsRegistsredByUser: any = await client.request(query);
         console.log(stationsRegistsredByUser.OnlyCars_StationRegistered.length);
 
-        const chargersFromPinata: any = [];
-
-        stationsRegistsredByUser.OnlyCars_StationRegistered.forEach(
-          async (station: any) => {
-            console.info("Getting Pinata data for station: ", station.metadata);
-            fetch(`https://gateway.pinata.cloud/ipfs/${station.metadata}`)
-              .then((response) => response.json())
-              .then((response) => {
-                console.log({
-                  name: response.name,
-                  address: response.address,
-                  latitude: response.latitude,
-                  longitude: response.longitude,
-                  chargers: response.chargers,
-                  fastChargerConnectors: response.fastChargerConnectors,
-                  rapidChargerConnectors: response.rapidChargerConnectors,
-                  slowChargerConnectors: response.slowChargerConnectors,
-                });
-                chargersFromPinata.push({
-                  name: response.name,
-                  address: response.address,
-                  latitude: response.latitude,
-                  longitude: response.longitude,
-                  chargers: response.chargers,
-                  fastChargerConnectors: response.fastChargerConnectors,
-                  rapidChargerConnectors: response.rapidChargerConnectors,
-                  slowChargerConnectors: response.slowChargerConnectors,
-                });
-              })
-              .catch((err) => console.error(err));
-          }
+        const chargersFromPinata = await Promise.all(
+          stationsRegistsredByUser.OnlyCars_StationRegistered.map(
+            async (station: any) => {
+              console.info(
+                "Getting Pinata data for station: ",
+                station.metadata
+              );
+              return fetch(
+                `https://gateway.pinata.cloud/ipfs/${station.metadata}`
+              )
+                .then((response) => response.json())
+                .then((response) => {
+                  console.log({
+                    name: response.name,
+                    address: response.address,
+                    latitude: response.latitude,
+                    longitude: response.longitude,
+                    chargers: response.chargers,
+                    fastChargerConnectors: response.fastChargerConnectors,
+                    rapidChargerConnectors: response.rapidChargerConnectors,
+                    slowChargerConnectors: response.slowChargerConnectors,
+                  });
+                  return {
+                    name: response.name,
+                    address: response.address,
+                    latitude: response.latitude,
+                    longitude: response.longitude,
+                    chargers: response.chargers,
+                    fastChargerConnectors: response.fastChargerConnectors,
+                    rapidChargerConnectors: response.rapidChargerConnectors,
+                    slowChargerConnectors: response.slowChargerConnectors,
+                  };
+                })
+                .catch((err) => console.error(err));
+            }
+          )
         );
 
         setChargers(chargersFromPinata);
@@ -265,72 +279,65 @@ function MyDevicesPage() {
         <div>
           <div className="flex items-center justify-between">
             <div className="text-2xl font-bold">Your registered vehicles</div>
-            {vehicles.length > 0 && (
-              <Link
-                href="/dashboard/my-devices/register-vehicle"
-                className="block rounded-md bg-sky-600 px-3 py-2 text-center text-sm font-semibold text-white shadow-sm hover:bg-sky-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-600"
-              >
-                Register Vehicle
-              </Link>
-            )}
+            <Link
+              href="/dashboard/my-devices/register-vehicle"
+              className="block rounded-md bg-sky-600 px-3 py-2 text-center text-sm font-semibold text-white shadow-sm hover:bg-sky-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-600"
+            >
+              Register Vehicle
+            </Link>
           </div>
           <div className="mt-5 grid grid-cols-3 gap-5">
-            {vehicles.map((vehicle: any, index: number) => (
-              <div
-                key={index}
-                className="bg-zinc-900/70 border border-zinc-800 p-4 rounded-lg shadow-sm"
-              >
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center">
-                    <div className="flex-shrink-0 h-12 w-12">
-                      <img
-                        className="h-12 w-12 rounded-full"
-                        src={`https://ui-avatars.com/api/?name=${vehicle.make}${vehicle.model}&background=random`}
-                        alt={vehicle.name}
-                      />
-                    </div>
-                    <div className="ml-4">
-                      <div>
-                        <div className="text-sm font-semibold text-white">
-                          {vehicle.make} {vehicle.model} {vehicle.year}
-                        </div>
-                        <div className="text-sm text-zinc-400">
-                          {vehicle.make}
+            {vehicles.length > 0 &&
+              vehicles.map((vehicle: any, index: number) => (
+                <div
+                  key={index}
+                  className="bg-zinc-900/70 border border-zinc-800 p-4 rounded-lg shadow-sm"
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center">
+                      <div className="flex-shrink-0 h-12 w-12">
+                        <img
+                          className="h-12 w-12 rounded-full"
+                          src={`https://ui-avatars.com/api/?name=${vehicle.make}${vehicle.model}&background=random`}
+                          alt={vehicle.name}
+                        />
+                      </div>
+                      <div className="ml-4">
+                        <div>
+                          <div className="text-sm font-semibold text-white">
+                            {vehicle.name}
+                          </div>
+                          <div className="text-sm text-zinc-400">
+                            {vehicle.make} {vehicle.model} {vehicle.year}
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
 
-                  <div>
-                    {vehicle.source === "Morph" ? (
-                      <span className="inline-flex items-center rounded-md bg-[#15a800] px-2 py-1 text-xs font-medium text-white ring-1 ring-inset ring-[#15a800]-700/10">
-                        Morph Chain
+                    <div>
+                      <span className="inline-flex items-center rounded-md bg-sky-900 px-2 py-1 text-xs font-medium text-sky-200 ring-1 ring-inset ring-sky-600-700/10">
+                        DIMO / MorphL2
                       </span>
-                    ) : (
-                      <span className="inline-flex items-center rounded-md bg-[#ade9f3] px-2 py-1 text-xs font-medium text-black ring-1 ring-inset ring-[#ade9f3]-700/10">
-                        DIMO Protocol
-                      </span>
-                    )}
+                    </div>
                   </div>
-                </div>
-                {vehicle.chargerType && (
-                  <div className="mt-5 flex items-center">
-                    <div className="text-sm text-zinc-400 mr-4">
-                      {vehicle.chargerType && (
-                        <span>{vehicle.chargerType}</span>
-                      )}
-                      {" -"}
+                  {vehicle.chargerType && (
+                    <div className="mt-5 flex items-center">
+                      <div className="text-sm text-zinc-400 mr-4">
+                        {vehicle.chargerType && (
+                          <span>{vehicle.chargerType}</span>
+                        )}
+                        {" -"}
+                        {vehicle.connectorType && (
+                          <span> {vehicle.connectorType} Connector</span>
+                        )}
+                      </div>
                       {vehicle.connectorType && (
-                        <span> {vehicle.connectorType} Connector</span>
+                        <div className="text-sm text-zinc-500"></div>
                       )}
                     </div>
-                    {vehicle.connectorType && (
-                      <div className="text-sm text-zinc-500"></div>
-                    )}
-                  </div>
-                )}
-              </div>
-            ))}
+                  )}
+                </div>
+              ))}
           </div>
           <Link
             href="/dashboard/my-devices/register-vehicle"

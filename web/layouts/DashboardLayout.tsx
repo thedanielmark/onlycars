@@ -8,6 +8,10 @@ import {
   DialogTitle,
   Disclosure,
   DisclosureButton,
+  Listbox,
+  ListboxButton,
+  ListboxOption,
+  ListboxOptions,
   // DisclosurePanel,
   Menu,
   MenuButton,
@@ -17,13 +21,15 @@ import {
 import {
   Bars3Icon,
   BellIcon,
+  CheckIcon,
+  ChevronUpDownIcon,
   WalletIcon,
   XMarkIcon,
 } from "@heroicons/react/24/outline";
 import { ReactNode, useEffect, useState } from "react";
 import { useAuth } from "@/providers/AuthProvider";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { IUserPayload } from "@/utils/types/IUserData";
 import { RotatingLines } from "react-loader-spinner";
 import { ethers, formatEther, JsonRpcSigner, parseEther } from "ethers";
@@ -32,6 +38,9 @@ import {
   createConsentProofPayload,
 } from "@xmtp/consent-proof-signature";
 import { contractABI } from "@/utils/contractABI";
+// import { deviceDefinitions } from "@/utils/deviceDefinitions";
+import { GraphQLClient } from "graphql-request";
+import vehiclesMinted from "@/utils/queries/vehiclesMinted";
 
 const navigation = [
   { name: "Navigate", href: "/dashboard" },
@@ -55,6 +64,7 @@ interface LayoutProps {
 
 const DashboardLayout = ({ children }: LayoutProps) => {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const {
     loggedIn,
     logout,
@@ -70,9 +80,14 @@ const DashboardLayout = ({ children }: LayoutProps) => {
   const [wallet, setWallet] = useState<any | null>(null);
   const [subscriptionStatus, setSubscriptionStatus] = useState<boolean>(false);
   const [walletModalOpen, setWalletModalOpen] = useState<boolean>(false);
-  const [balance, setBalance] = useState<number | null>(null);
+  const [useStationModal, setUseStationModal] = useState<boolean>(false);
+  const [balance, setBalance] = useState<number | any>(null);
   const [onlyCarsBalance, setOnlyCarsBalance] = useState<number | any>();
+  const [selectedDIMOCar, setSelectedDIMOCar] = useState<any>(null);
+  const [vehicles, setVehicles] = useState<any[] | any>([]);
+  const stationId = searchParams.get("stationId");
 
+  // Getting Web3Auth wallet balance
   useEffect(() => {
     const getTheBalance = async () => {
       const balance = await getBalance();
@@ -87,6 +102,7 @@ const DashboardLayout = ({ children }: LayoutProps) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loggedIn]);
 
+  // Getting user data from the API
   useEffect(() => {
     const userPayload: IUserPayload = user;
 
@@ -111,8 +127,6 @@ const DashboardLayout = ({ children }: LayoutProps) => {
             console.log("Response message:", data200.message);
             console.log("Address", address);
             fetchAddressStatus(address);
-            // Sign user into DIMO
-            signIntoDimo();
             break;
 
           case 201: // Created
@@ -120,8 +134,6 @@ const DashboardLayout = ({ children }: LayoutProps) => {
             setMessage(data201.message);
             console.log("User created message:", data201.message);
             fetchAddressStatus(address);
-            // Sign user into DIMO
-            signIntoDimo();
             break;
 
           case 400: // Bad Request
@@ -162,6 +174,7 @@ const DashboardLayout = ({ children }: LayoutProps) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, address]);
 
+  // Checking if user exists on XMTP
   const fetchAddressStatus = async (address: string) => {
     try {
       const response = await fetch(
@@ -211,6 +224,7 @@ const DashboardLayout = ({ children }: LayoutProps) => {
     }
   };
 
+  // Setting Wallet
   useEffect(() => {
     const getDetails = async () => {
       if (loggedIn) {
@@ -222,6 +236,7 @@ const DashboardLayout = ({ children }: LayoutProps) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [provider, loggedIn]);
 
+  // Get wallet
   const getWallet = async (): Promise<JsonRpcSigner | null> => {
     if (!provider) {
       // uiConsole("provider not initialized yet");
@@ -232,6 +247,7 @@ const DashboardLayout = ({ children }: LayoutProps) => {
     return ethersProvider.getSigner();
   };
 
+  // Connect to XMTP
   const connectToXMTP = async () => {
     // Get consent from user
     const timestamp = Date.now();
@@ -247,7 +263,6 @@ const DashboardLayout = ({ children }: LayoutProps) => {
     const payloadBytes = createConsentProofPayload(signature, timestamp);
     const base64Payload = Buffer.from(payloadBytes).toString("base64");
 
-    // Get device information
     // Get device information
     const browserInfo = {
       userAgent: navigator.userAgent,
@@ -285,22 +300,23 @@ const DashboardLayout = ({ children }: LayoutProps) => {
     console.log("Subscription response:", subscribeResponse);
   };
 
-  const signIntoDimo = async () => {
-    console.log("Signing into DIMO");
-    // POST request
-    const response = await fetch(
-      `${process.env.NEXT_PUBLIC_DIMO_AUTH_URL}/auth/web3/generate_challenge?client_id=${process.env.NEXT_PUBLIC_DIMO_CLIENT_ID}&domain=${process.env.NEXT_PUBLIC_DIMO_REDIRECT_URI}&scope=openid+email&response_type=code&address=${address}`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ address }),
-      }
-    );
-    const data = await response.json();
-    console.log("Sign in response:", data);
-  };
+  // Sign Into DIMO
+  // const signIntoDimo = async () => {
+  //   console.log("Signing into DIMO");
+  //   // POST request
+  //   const response = await fetch(
+  //     `${process.env.NEXT_PUBLIC_DIMO_AUTH_URL}/auth/web3/generate_challenge?client_id=${process.env.NEXT_PUBLIC_DIMO_CLIENT_ID}&domain=${process.env.NEXT_PUBLIC_DIMO_REDIRECT_URI}&scope=openid+email&response_type=code&address=${address}`,
+  //     {
+  //       method: "POST",
+  //       headers: {
+  //         "Content-Type": "application/json",
+  //       },
+  //       body: JSON.stringify({ address }),
+  //     }
+  //   );
+  //   const data = await response.json();
+  //   console.log("Sign in response:", data);
+  // };
 
   // Handle Top up wallet
   const handleTopUpWallet = async () => {
@@ -321,9 +337,11 @@ const DashboardLayout = ({ children }: LayoutProps) => {
 
       // Wait for transaction to finish
       const receipt = await tx.wait();
-      if (receipt.status === "success") {
+      if (receipt.hash) {
+        setWalletModalOpen(false);
         console.log("Top up successful");
       } else {
+        setWalletModalOpen(false);
         console.log("Top up failed");
       }
     } catch (error) {
@@ -331,8 +349,8 @@ const DashboardLayout = ({ children }: LayoutProps) => {
     }
   };
 
+  // Getting OnlyCars wallet balance
   useEffect(() => {
-    // TODO Fix this shit
     const getContractBalance = async () => {
       const signer = await getSigner();
       const contractAddress = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS || "";
@@ -358,6 +376,145 @@ const DashboardLayout = ({ children }: LayoutProps) => {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loggedIn]);
+
+  // Check if url has stationId query param
+  useEffect(() => {
+    const stationId = searchParams.get("stationId");
+    if (stationId) {
+      console.log("stationId:", stationId);
+      // use station logic here
+      setUseStationModal(true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Getting cars owned by the user from Envio indexer
+  useEffect(() => {
+    const fetchData = async (address: any) => {
+      try {
+        const client = new GraphQLClient("http://localhost:8080/v1/graphql");
+        const query = vehiclesMinted(address);
+        const vehiclesMintedByUser: any = await client.request(query);
+
+        const vehiclesFromFetch = await Promise.all(
+          vehiclesMintedByUser.OnlyCars_VehicleRegistered.map(
+            async (vehicle: any) => {
+              console.info(
+                "Getting Pinata data for vehicle: ",
+                vehicle.metadata
+              );
+              return fetch(
+                `https://gateway.pinata.cloud/ipfs/${vehicle.metadata}`
+              )
+                .then((response) => response.json())
+                .then((response) => {
+                  console.log({
+                    name: response.name,
+                    chargerType: response.chargerType,
+                    connectorType: response.connectorType,
+                    make: response.make,
+                    model: response.model,
+                    year: response.year,
+                    source: "Morph",
+                    id: vehicle.vehicleId,
+                  });
+                  return {
+                    name: response.name,
+                    chargerType: response.chargerType,
+                    connectorType: response.connectorType,
+                    make: response.make,
+                    model: response.model,
+                    year: response.year,
+                    source: "Morph",
+                    id: vehicle.vehicleId,
+                  };
+                })
+                .catch((err) => console.error(err));
+            }
+          )
+        );
+
+        setVehicles(vehiclesFromFetch);
+        setSelectedDIMOCar(vehiclesFromFetch[0]);
+        // console.log("vehiclesFromPinata set");
+        console.log(vehicles);
+        // if (vehiclesFromPinata) {
+        //   setVehicles(vehiclesFromPinata);
+        // }
+      } catch (err: any) {
+        console.log(err.message);
+      }
+    };
+
+    if (address) {
+      fetchData(address);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [address]);
+
+  const handleUseStation = async () => {
+    try {
+      const signer = await getSigner();
+
+      const contractAddress = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS || "";
+      const contract = new ethers.Contract(
+        contractAddress,
+        JSON.parse(JSON.stringify(contractABI)),
+        signer
+      );
+
+      console.log(selectedDIMOCar);
+
+      const tx = await contract.useStation(
+        stationId,
+        selectedDIMOCar.id,
+        parseEther("0.0001")
+      );
+      console.log(tx);
+
+      // Wait for transaction to finish
+      const receipt = await tx.wait();
+      if (receipt.hash) {
+        // POST request to API
+        const url = `${process.env.NEXT_PUBLIC_API_ROUTE}/broadcast/charge-successful`;
+
+        const payload: { [key: string]: any } = {
+          address,
+        };
+
+        // Push inputs into payload using map
+        Object.keys(selectedDIMOCar).map((key: any) => {
+          payload[key] = selectedDIMOCar[key];
+        });
+
+        // Send a POST request
+        fetch(url, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json", // Indicates you're sending JSON data
+          },
+          body: JSON.stringify(payload), // Convert the data object to JSON string
+        })
+          .then((response) => {
+            if (!response.ok) {
+              throw new Error("Network response was not ok");
+            }
+            return response.json(); // Parse the JSON response
+          })
+          .then((data) => {
+            console.log("Success:", data);
+            // TODO close the modal
+          })
+          .catch((error) => {
+            console.error("Error:", error);
+          });
+      } else {
+        console.log("Payment failed");
+      }
+    } catch (error) {
+      console.error("Error during payment:", error);
+    }
+  };
 
   return (
     <>
@@ -667,6 +824,165 @@ const DashboardLayout = ({ children }: LayoutProps) => {
                   className="mt-2 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold border border-zinc-200 text-zinc-900 shadow-sm hover:bg-sky-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-600"
                 >
                   Close
+                </button>
+              </div>
+            </DialogPanel>
+          </div>
+        </div>
+      </Dialog>
+      {/* Modal with charger info end */}
+
+      {/* Modal with charger info start */}
+      <Dialog
+        open={useStationModal}
+        onClose={setUseStationModal}
+        className="relative z-50"
+      >
+        <DialogBackdrop
+          transition
+          className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity data-[closed]:opacity-0 data-[enter]:duration-300 data-[leave]:duration-200 data-[enter]:ease-out data-[leave]:ease-in"
+        />
+
+        <div className="fixed inset-0 z-10 w-screen overflow-y-auto">
+          <div className="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
+            <DialogPanel
+              transition
+              className="relative transform overflow-hidden rounded-lg bg-black px-4 pb-4 pt-5 text-left shadow-xl transition-all data-[closed]:translate-y-4 data-[closed]:opacity-0 data-[enter]:duration-300 data-[leave]:duration-200 data-[enter]:ease-out data-[leave]:ease-in sm:my-8 sm:w-full sm:max-w-lg sm:p-6 data-[closed]:sm:translate-y-0 data-[closed]:sm:scale-95"
+            >
+              <div>
+                <div>
+                  <DialogTitle className="px-2 text-xl font-bold text-white">
+                    Pony Up <span className="ml-2">🦄</span>
+                  </DialogTitle>
+                  {vehicles?.length > 0 && selectedDIMOCar && (
+                    <div className="mt-5">
+                      {/* Choose DIMO test vehicle start */}
+                      <div className="col-span-3 sm:col-span-3">
+                        <div className="rounded-md px-3 pb-1.5 pt-2.5 shadow-sm ring-1 ring-inset ring-zinc-800 focus-within:ring-2 focus-within:ring-sky-600">
+                          <label
+                            htmlFor="name"
+                            className="block text-xs font-medium text-zinc-200"
+                          >
+                            DIMO Test Vehicle you&apos;re emulating
+                          </label>
+                          <Listbox
+                            value={selectedDIMOCar}
+                            onChange={setSelectedDIMOCar}
+                          >
+                            <div className="relative">
+                              <ListboxButton className="relative w-full cursor-default rounded-md text-white py-1.5 text-left shadow-sm focus:outline-none sm:text-sm sm:leading-6">
+                                <span className="block truncate">
+                                  {selectedDIMOCar.make} {selectedDIMOCar.model}{" "}
+                                  {selectedDIMOCar.year} (
+                                  <span className="text-sky-600">
+                                    {selectedDIMOCar.id}
+                                  </span>
+                                  )
+                                </span>
+                                <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
+                                  <ChevronUpDownIcon
+                                    aria-hidden="true"
+                                    className="h-5 w-5 text-zinc-400"
+                                  />
+                                </span>
+                              </ListboxButton>
+
+                              <ListboxOptions
+                                transition
+                                className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md bg-black py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none data-[closed]:data-[leave]:opacity-0 data-[leave]:transition data-[leave]:duration-100 data-[leave]:ease-in sm:text-sm"
+                              >
+                                {vehicles.map((car: any, index: number) => (
+                                  <ListboxOption
+                                    key={index}
+                                    value={car}
+                                    className="group relative cursor-default select-none py-2 pl-3 pr-9 text-zinc-200 data-[focus]:bg-sky-600 data-[focus]:text-white"
+                                  >
+                                    <span className="block truncate font-normal group-data-[selected]:font-semibold">
+                                      {car.make} {car.model} {car.year} (
+                                      {car.id})
+                                    </span>
+
+                                    <span className="absolute inset-y-0 right-0 flex items-center pr-4 text-sky-600 group-data-[focus]:text-white [.group:not([data-selected])_&]:hidden">
+                                      <CheckIcon
+                                        aria-hidden="true"
+                                        className="h-5 w-5"
+                                      />
+                                    </span>
+                                  </ListboxOption>
+                                ))}
+                              </ListboxOptions>
+                            </div>
+                          </Listbox>
+                        </div>
+                      </div>
+                      {/* Choose DIMO test vehicle end */}
+                    </div>
+                  )}
+
+                  <div className="mt-3 bg-zinc-900/70 border border-zinc-800 p-4 rounded-lg shadow-sm">
+                    <h3 className="text-sm font-semibold text-white">
+                      You are about to pay 0.0001 ETH for usage of the charging
+                      station from your OnlyCars wallet.
+                    </h3>
+                    <table className="mt-5">
+                      <tbody>
+                        <tr>
+                          <td className="text-sm flex items-center text-zinc-200">
+                            <div>Current Balance</div>
+                          </td>
+                          <td className="text-sm">
+                            <div className="ml-3 flex items-center gap-x-2">
+                              <div>
+                                <img
+                                  src="https://cryptologos.cc/logos/ethereum-eth-logo.png"
+                                  alt="Eth"
+                                  className="h-4 w-4 mx-auto"
+                                />
+                              </div>
+                              <div className="text-sm font-semibold text-white">
+                                {onlyCarsBalance && onlyCarsBalance} ETH
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                        <tr>
+                          <td className="text-sm flex items-center">
+                            <div className="mt-3">Amount Payable</div>
+                          </td>
+                          <td className="text-sm">
+                            <div className="mt-3 ml-3 flex items-center gap-x-2">
+                              <div>
+                                <img
+                                  src="https://cryptologos.cc/logos/ethereum-eth-logo.png"
+                                  alt="Eth"
+                                  className="h-4 w-4 mx-auto"
+                                />
+                              </div>
+                              <div className="text-sm font-semibold text-white">
+                                0.0001 ETH
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+              <div className="mt-5">
+                <button
+                  type="button"
+                  onClick={handleUseStation}
+                  className="inline-flex w-full justify-center rounded-md bg-sky-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-sky-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-600"
+                >
+                  Pay Amount
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setWalletModalOpen(false)}
+                  className="mt-2 inline-flex w-full justify-center rounded-md bg-red-600 px-3 py-2 text-sm font-semibold border border-red-800 text-white shadow-sm hover:bg-red-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600"
+                >
+                  Cancel
                 </button>
               </div>
             </DialogPanel>

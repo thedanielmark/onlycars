@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 "use client";
 
 import { useEffect, useState } from "react";
@@ -304,69 +305,74 @@ function RegisterChargerPage() {
         setShowSuccess(true);
         setTransactionHash(receipt.hash);
 
-        // Fetch charger data
-        try {
-          const client = new GraphQLClient("http://localhost:8080/v1/graphql");
-          const query = stationsByIPFSHashQuery(metadataIPFSHash);
+        // POST request to API
+        const url = `${process.env.NEXT_PUBLIC_API_ROUTE}/broadcast/station-created`;
 
-          const pollForData = async () => {
-            const stationsRegistsredByUser: any = await client.request(query);
-            console.log(stationsRegistsredByUser);
-            if (
-              stationsRegistsredByUser.OnlyCars_StationRegistered.length > 0
-            ) {
-              clearInterval(intervalId);
-              console.log(stationsRegistsredByUser);
-              generateQRCode(stationsRegistsredByUser);
+        const payload: { [key: string]: any } = {
+          currentWalletAddress,
+        };
+
+        // Push inputs into payload using map
+        Object.keys(inputs).map((key: string) => {
+          payload[key] = inputs[key as keyof typeof inputs];
+        });
+
+        // Send a POST request
+        fetch(url, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json", // Indicates you're sending JSON data
+          },
+          body: JSON.stringify(payload), // Convert the data object to JSON string
+        })
+          .then((response) => {
+            if (!response.ok) {
+              throw new Error("Network response was not ok");
             }
-          };
-          const intervalId = setInterval(pollForData, 1000);
-        } catch (err: any) {
-          console.log(err.message);
-        }
+            return response.json(); // Parse the JSON response
+          })
+          .then((data) => {
+            console.log("Success:", data);
+            // Fetch charger data
+            try {
+              const client = new GraphQLClient(
+                "http://localhost:8080/v1/graphql"
+              );
+              const query = stationsByIPFSHashQuery(metadataIPFSHash);
 
-        setModalOpen(true);
-        setIsLoading(false);
+              const pollForData = async () => {
+                const stationsRegistsredByUser: any = await client.request(
+                  query
+                );
+                console.log(stationsRegistsredByUser);
+                if (
+                  stationsRegistsredByUser.OnlyCars_StationRegistered.length > 0
+                ) {
+                  clearInterval(intervalId);
+                  console.log(stationsRegistsredByUser);
+                  generateQRCode(stationsRegistsredByUser);
+                }
+              };
+              const intervalId = setInterval(pollForData, 1000);
+            } catch (err: any) {
+              console.log(err.message);
+            }
+
+            setModalOpen(true);
+            setIsLoading(false);
+          })
+          .catch((error) => {
+            console.error("Error:", error);
+          });
       }
     };
 
     function generateQRCode(stationsRegistsredByUser: any) {
       // Call a free API to generate QR code
-      const qrCodeAPI = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${stationsRegistsredByUser.OnlyCars_StationRegistered[0].stationId}`;
+      const qrCodeAPI = `https://api.qrserver.com/v1/create-qr-code/?data=https://onlycars.thedanielmark.app/dashboard?stationId=${stationsRegistsredByUser.OnlyCars_StationRegistered[0].stationId}&light=000000&dark=38bdf8&margin=2&size=300`;
       setQRCode(qrCodeAPI);
       setChargerDataIsReady(true);
     }
-
-    // function getPinataData(stationsRegistsredByUser: any) {
-    //   fetch(
-    //     `https://gateway.pinata.cloud/ipfs/${stationsRegistsredByUser.OnlyCars_StationRegistered[0].metadata}`
-    //   )
-    //     .then((response) => response.json())
-    //     .then((response) => {
-    //       // Add charger to chargerData array
-    //       setChargerData({
-    //         name: response.name,
-    //         address: response.address,
-    //         latitude: response.latitude,
-    //         longitude: response.longitude,
-    //         chargers: response.chargers,
-    //         fastChargerConnectors: response.fastChargerConnectors,
-    //         rapidChargerConnectors: response.rapidChargerConnectors,
-    //         slowChargerConnectors: response.slowChargerConnectors,
-    //       });
-    //       console.log({
-    //         name: response.name,
-    //         address: response.address,
-    //         latitude: response.latitude,
-    //         longitude: response.longitude,
-    //         chargers: response.chargers,
-    //         fastChargerConnectors: response.fastChargerConnectors,
-    //         rapidChargerConnectors: response.rapidChargerConnectors,
-    //         slowChargerConnectors: response.slowChargerConnectors,
-    //       });
-    //     })
-    //     .catch((err) => console.error(err));
-    // }
 
     if (metadataIPFSHash && attestationID) {
       writeData();
@@ -827,11 +833,7 @@ function RegisterChargerPage() {
                       payments to you.
                     </div>
 
-                    <img
-                      src="https://quickchart.io/qr?text=9&light=000000&dark=38bdf8&margin=2&size=300"
-                      alt="QR Code"
-                      className="mx-auto mt-4"
-                    />
+                    <img src={QRCode} alt="QR Code" className="mx-auto mt-4" />
 
                     {showSuccess && (
                       <div className="mt-5 rounded-md bg-sky-900 px-2 py-3">
